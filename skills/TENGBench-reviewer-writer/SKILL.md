@@ -1,6 +1,6 @@
 ---
 name: TENGBench-reviewer-writer
-description: TENGBench 审核出题。拿到一篇 TENG 论文 PDF，一次读完，完成重命名、建索引、5 维质量打分、按配额生成各题型 QA（多步推理题附分步答案），输出到 cache 该论文文件夹。
+description: TENGBench 审核出题。拿到一篇 TENG 论文 PDF，一次读完，完成重命名、建索引、5 维质量打分、按配额生成各题型 QA（多步推理题附分步答案），输出到 papers/index/{paper_id}/ 文件夹。
 ---
 
 # TENGBench-reviewer-writer
@@ -9,44 +9,50 @@ description: TENGBench 审核出题。拿到一篇 TENG 论文 PDF，一次读�
 你是 TENGBench 的 TENG 领域专家 + 出题专家。拿到一篇 TENG 论文 PDF，一次读完，完成四件事：规范重命名、建论文索引、5 维质量打分、按配额生成各题型 QA。一次任务在同一个 context 内完成全部步骤（论文只读一次，省 token）。
 
 ## 运行模式：多智能体并发（用 Task 工具派子 agent）
-当 `cache/{stem}/` 有多篇待审论文时，你用 Task 工具（subagent）并发处理：
-- 扫描 `cache/{stem}/` 拿到所有待审 PDF。
+当 `papers/index/` 有多篇待审论文时，你用 Task 工具（subagent）并发处理：
+- 扫描 `papers/index/` 拿到所有未处理 PDF（无 `.complete` 标记的）。
 - 对每篇 PDF 派一个子 agent（Task 工具，subagent_type=general-purpose），把本 SKILL 的"工作流六步"作为子 agent 的任务指令，让多个子 agent 同时各处理一篇论文。
-- 每个子 agent 独立写自己的 `cache/{stem}/`，互不干扰（物理隔离，无竞争）。
+- 每个子 agent 独立写自己的 `papers/index/{paper_id}/`，互不干扰（物理隔离，无竞争）。
 - 等所有子 agent 完成后，收集结果，报告本轮处理情况，重新扫描 inbox（编排 Agent 可能又分发新论文来）。
 - 并发度建议：同时派 3 到 5 个子 agent（视系统资源），不要一次派太多。
 - 单篇论文时直接自己处理（不必派子 agent，省开销）。
 
 ## 启动纪律
 1. 只在当前工作目录及其子目录活动，所有路径相对当前目录写。绝不向上跳出当前目录。
-2. 启动即循环处理 `cache/{stem}/` 里的 PDF，不先探索项目结构、不读其他 agent 的 SKILL、不读 src/orchestrator 的脚本。
+2. 启动即扫描 `papers/index/` 里的 PDF，不先探索项目结构、不读其他 agent 的 SKILL、不读 src/orchestrator 的脚本。
 3. 你需要的所有信息都在本 SKILL 里。读论文用 Read 工具直接读 PDF（Claude 原生多模态，图文并读），出题格式/打分规则/题型模板本 SKILL 全有，直接执行。
 4. 状态/配额只读 `state/master.json` 的 quota 字段和 `state/l1_topics.json`，不扫其他目录。
 
 ## 权限
-- 能读：`cache/{stem}/*.pdf`（待审论文）、`state/master.json`（只读配额）、`state/l1_topics.json`（只读考点）
-- 能写：`cache/{stem}/`（你的产物区）、`state/papers/{paper_id}.json`（回写该论文状态）
+- 能读：`papers/index/*.pdf`（待审论文）、`state/master.json`（只读配额）、`state/l1_topics.json`（只读考点）
+- 能写：`papers/index/{paper_id}/`（你的产物区）、`state/papers/{paper_id}.json`（回写该论文状态）
 - 能调用：`python3 src/qa_schema_validator.py`（自检）、`python3 src/mark_l1_topic_done.py`（L1 考点计数）
-- 禁止：不向上跳出当前目录；不读/不跑 src/orchestrator 的脚本；不动 papers/inbox、papers/qualified、papers/rejected；不写 state/master.json；不读其他 agent 的 SKILL 或代码。
-- 你的论文 PDF 来源是 `cache/{stem}/`，若该目录空，说明暂时无活，报告并等下一轮，不要自己去 papers/inbox 找。
+- 禁止：不向上跳出当前目录；不读/不跑 src/orchestrator 的脚本；不动 papers/inbox、papers/qualified、papers/rejected、cache/；不写 state/master.json；不读其他 agent 的 SKILL 或代码。
+- 你的论文 PDF 来源是 `papers/index/`，若该目录无未处理 PDF，说明暂时无活，等待 20 分钟后再扫。
 
 ## 输入 / 输出
-- 输入：`cache/{stem}/{任意文件名}.pdf`（一篇 TENG 论文）
-- 输出：`cache/{stem}/`
+- 输入：`papers/index/{任意文件名}.pdf`（一篇 TENG 论文）
+- 输出：`papers/index/{paper_id}/`（以 paper_id 命名的子目录）
   - `index.json` 论文索引
   - `score.json` 5 维打分
   - `qa/{qa_id}.json` 该论文全部 QA（每题一个文件）
 - 状态回写：更新 `state/papers/{paper_id}.json` 的 score、qa_count、status="screened"
+- "已处理"判断：`papers/index/{paper_id}/.complete` 文件存在则跳过该 PDF，不重复处理
 
 ## 终止条件
 
-- 以循环方式处理 inbox：取一个 PDF 走完下面六步，写产物，重新扫描 `cache/`。
-- 连续两次扫描 `cache/` 都无 PDF 时，报告"当前无待处理，等待新论文"并结束本轮。
-- 若编排 Agent 也已无活（看 `state/master.json` 的 phase 已到 calibration 且 counts.qualified+rejected 已稳定），输出：
-```
-reviewer-writer：inbox 暂无待处理论文。若编排 Agent 也提示全部完成，请手动关闭审核出题 agent。
-```
-- 否则保持待命，下一轮再扫，发现新论文继续处理。
+- 以循环方式处理：扫描 `papers/index/` 取所有待处理 PDF，对每篇走完下面六步，写产物，处理完后重新扫描。
+- 每轮处理完后扫描 `papers/index/`：
+  - 若有新 PDF 则继续处理。
+  - 若无 PDF（或所有 PDF 已处理完），输出等待提示，然后**每隔 20 分钟自动重新扫描一次**，等待编排 Agent 分发新论文。
+- 等待期间的行为：每 20 分钟执行一次扫描，扫到新论文立刻处理，扫不到继续等待，输出：
+  ```
+  [reviewer-writer] 当前无待处理论文，20 分钟后再次检查。已处理：{n} 篇。
+  ```
+- 若 `state/master.json` 的 phase 已到 calibration 且 counts 稳定，则停止轮询，输出：
+  ```
+  reviewer-writer：所有论文处理完毕，phase=calibration。请手动关闭审核出题 agent。
+  ```
 
 ## 工作流（按顺序执行，每篇论文走一遍）
 
@@ -91,10 +97,10 @@ reviewer-writer：inbox 暂无待处理论文。若编排 Agent 也提示全部�
 
 第 6 步 写 QA 文件 + 回写状态
 - 每题一个 JSON，文件名与 qa_id 统一为 `{layer}_{type}_{subcategory}_{序号}.json`（序号在该 type 内全局递增）。例：L1_BK1_general_001、L2_RP1_aviation_001、L3_DG2_aviation_001。
-- 写到 `cache/{stem}/qa/`
-- 不移动 PDF——原 PDF 保持在 `cache/{stem}/`（由编排 Agent 在 collect 时连同产物搬到 qualified）。
-- index.json 里必须含 `original_filename`（原 PDF 文件名，collect 用它定位 PDF）。
-- **最后写完成标记**：所有产物（index.json + score.json + 全部 qa/）写完后，在 `cache/{stem}/` 创建 `.complete` 空文件——这是"该论文处理完成"的原子信号，collect 只在有它时才收取（防止出一半被收走）。
+- 写到 `papers/index/{paper_id}/qa/`
+- 不移动 PDF——原 PDF 保持在 `papers/index/`（PDF 不动，产物写到 `papers/index/{paper_id}/` 子目录）。
+- index.json 里必须含 `original_filename`（原 PDF 文件名）。
+- **最后写完成标记**：所有产物（index.json + score.json + 全部 qa/）写完后，在 `papers/index/{paper_id}/` 创建 `.complete` 空文件——这是"该论文处理完成"的原子信号，下次扫描时跳过已完成的 PDF（防止重复处理）。
 - 回写 `state/papers/{paper_id}.json`：填 score、qa_count、status="screened"、original_filename
 
 ---
@@ -332,7 +338,7 @@ L1 通识题只在考点特别匹配时才出，不强制凑题：
 ---
 
 ## 输出规范
-- 每篇论文独立处理、独立写自己的 `outbox/{paper_id}/`，互不干扰；处理完一篇即可被编排 Agent 收取，不必等整批。
+- 每篇论文独立处理、独立写自己的 `papers/index/{paper_id}/`，互不干扰；处理完一篇即可，不必等整批。
 - 不得编造论文没有的内容——每题的 source_excerpt 必须真实来自该论文。
 - 每题必附 source_excerpt（100–300 字 + 出处）。
 - DG3 严守全局配额 100（读 master.json 确认未满才出）。
