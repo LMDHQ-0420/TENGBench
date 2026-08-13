@@ -67,12 +67,14 @@ def validate(qa: dict) -> list:
     if t in {"BK1", "BK2", "BK3", "BK4", "RP1", "RP2", "RP3", "RP4"}:
         opts = qa.get("options")
         if not isinstance(opts, dict) or not opts:
-            e.append(t + " 需要 options（字母到选项文本的映射对象，如 {\"A\":\"...\",\"B\":\"...\",\"C\":\"...\",\"D\":\"...\"}）")
+            e.append(t + " 需要 options（字母到选项文本的映射对象，如 {\"A\":\"...\",\"B\":\"...\",\"C\":\"...\",\"D\":\"...\",\"E\":\"...\"}）")
         else:
-            if not all(k in opts for k in ("A", "B", "C", "D")):
-                e.append(f"{t} options 应包含 A/B/C/D 四项")
+            if not all(k in opts for k in ("A", "B", "C", "D", "E")):
+                e.append(f"{t} options 应包含 A/B/C/D/E 五项（随机猜对率 20%）")
         if "answer" not in qa:
-            e.append(f"{t} 需要 answer（正确项字母，如 'B'）")
+            e.append(f"{t} 需要 answer（正确项字母，如 'B'，可选 A/B/C/D/E）")
+        elif qa.get("answer") not in ("A", "B", "C", "D", "E"):
+            e.append(f"{t} answer 必须是 A/B/C/D/E 之一，当前为：{qa.get('answer')}")
         if mech != "A":
             e.append(f"{t} scoring.mechanism 应为 'A'")
         # 旧字段冗余检查
