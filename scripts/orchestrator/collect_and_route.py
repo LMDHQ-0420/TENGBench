@@ -82,12 +82,8 @@ def main():
             shutil.move(str(f), str(dest / f.name))
         d.rmdir()
 
-        orig = idx.get("original_filename", "")
-        if orig and (dest / orig).exists():
-            shutil.move(str(dest / orig), str(dest / "paper.pdf"))
-
-        # 迁移 state 记录
-        orig_stem = idx.get("original_filename", "").rsplit(".", 1)[0] or paper_id
+        # 迁移 state 记录：original_stem -> paper_id
+        orig_stem = d.name  # distribute 时用原始目录名（stem）登记
         old_rec = STATE_PAPERS / f"{orig_stem}.json"
         rec_data = {}
         if old_rec.exists():

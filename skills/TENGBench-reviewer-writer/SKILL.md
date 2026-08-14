@@ -78,7 +78,6 @@ description: TENGBench 审核出题。拿到一篇 TENG 论文 PDF，一次读�
   "venue": "期刊全称",
   "doi": "...",
   "date": "YYYY-MM",
-  "original_filename": "原PDF文件名.pdf",
   "subcategory": "aviation|wearable|tactile|chemical|hmi|iot|biomedical|marine|wind|motion|acoustic|robotics|smarttextile|energyharv|space"
 }
 ```
@@ -144,7 +143,7 @@ python3 scripts/reviewer_writer/generate_paper_id.py cache/{stem}/
   - 示例：`L2_RP1_aviation_aviation_NatComm2023_Xu_Triboelectric_Nanogenerator_Stall_001.json`
 - 写到 `cache/{paper_id}/qa/`
 - 所有产物写完后，创建 `cache/{paper_id}/.complete` 空文件
-- 回写 `state/papers/{paper_id}.json`：填 score、qa_count、status="screened"、original_filename
+- 回写 `state/papers/{paper_id}.json`：填 score、qa_count、status="screened"
 
 ---
 

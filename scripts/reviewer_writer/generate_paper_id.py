@@ -14,7 +14,7 @@ generate_paper_id.py —— reviewer-writer 第1步后调用：从 index.json �
 2. 从 title/venue/date/authors/subcategory 字段拼接 paper_id
 3. 把 paper_id 写回 index.json
 4. 把该目录下唯一的 PDF 重命名为 {paper_id}.pdf
-5. 更新 index.json 里的 original_filename 字段
+5. 把 cache 目录重命名为 {paper_id}
 所有操作写日志到 logs/{date}-{AM|PM}.log
 """
 import json
@@ -174,9 +174,6 @@ def main():
             else:
                 pdf.rename(new_path)
                 log("reviewer", f"[PAPER_ID] PDF 重命名：{pdf.name} -> {new_name}")
-            # 更新 index.json 的 original_filename
-            idx["original_filename"] = new_name
-            index_f.write_text(json.dumps(idx, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # 重命名 cache 目录：{原始stem} -> {paper_id}
     new_dir = paper_dir.parent / paper_id
