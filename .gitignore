@@ -1,32 +1,26 @@
-# 数据目录（不推）
+# 论文数据（不推）
 papers/inbox/
 papers/qualified/
 papers/rejected/
-papers/index/
 cache/
-results/
-benchmark/golden_samples/
+
+# benchmark 产物（不推）
 benchmark/questions/
 benchmark/rubrics/
 benchmark/scorers/
-benchmark/judge_config/
 
 # 状态文件（不推）
-state/papers/
-state/master.json
+state/
+logs/
 
 # Claude 配置（不推）
 .claude/
-
-# 日志（不推）
-logs/
 
 # Python 缓存
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.Python
 *.py[cod]
 
 # macOS
