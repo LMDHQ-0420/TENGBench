@@ -3,9 +3,8 @@
 """
 collect_and_route.py —— 编排 Agent 第2步：按分数收取并分拣
 扫描 cache/{stem}/（每篇论文一个文件夹，含 PDF + index/score/qa），读 score.json.total，按阈值移动：
-  >=3.5  -> papers/qualified/{subcategory}/{paper_id}/   (status=qualified)
-  <3.0   -> papers/rejected/{subcategory}/{paper_id}/    (status=rejected)
-  3.0-3.5 -> papers/qualified/{subcategory}/{paper_id}/  (status=needs_human_review)
+  >=3.5 -> papers/qualified/{subcategory}/{paper_id}/   (status=qualified)
+  <3.5  -> papers/rejected/{subcategory}/{paper_id}/    (status=rejected)
 整个 cache/{stem}/ 目录搬到 qualified/rejected，原 PDF 重命名为 paper.pdf。
 同时把 state/papers 记录从 original_stem 迁移到最终 paper_id，填 score / qa_count。
 """
@@ -47,7 +46,7 @@ def main():
     dirs = [d for d in sorted(CACHE.iterdir()) if d.is_dir()]
     log("orchestrator", f"[COLLECT] 扫描 cache，发现 {len(dirs)} 个目录")
 
-    routed = {"qualified": 0, "rejected": 0, "needs_human_review": 0, "skipped": 0}
+    routed = {"qualified": 0, "rejected": 0, "skipped": 0}
     for d in dirs:
         score_f = d / "score.json"
         index_f = d / "index.json"
@@ -70,12 +69,10 @@ def main():
         qa_counts = count_qa(d)
         qa_total = sum(qa_counts.values())
 
-        if total > 3.5:
+        if total >= 3.5:
             dest, status = QUALIFIED / subcat / paper_id, "qualified"
-        elif total < 3.0:
-            dest, status = REJECTED / subcat / paper_id, "rejected"
         else:
-            dest, status = QUALIFIED / subcat / paper_id, "needs_human_review"
+            dest, status = REJECTED / subcat / paper_id, "rejected"
 
         dest.mkdir(parents=True, exist_ok=True)
         for f in list(d.iterdir()):
@@ -104,7 +101,7 @@ def main():
         qa_detail = " | ".join(f"{k}={v}" for k, v in sorted(qa_counts.items()))
         log("orchestrator", f"[COLLECT] [{status.upper()}] {paper_id} | score={total:.2f} | subcat={subcat} | qa={qa_total}题 ({qa_detail}) -> {dest.relative_to(ROOT)}")
 
-    log("orchestrator", f"[COLLECT] 完成：qualified={routed['qualified']} rejected={routed['rejected']} needs_human_review={routed['needs_human_review']} skipped={routed['skipped']}")
+    log("orchestrator", f"[COLLECT] 完成：qualified={routed['qualified']} rejected={routed['rejected']} skipped={routed['skipped']}")
 
 
 if __name__ == "__main__":

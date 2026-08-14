@@ -35,9 +35,8 @@ description: TENGBench 编排中枢。分发论文、收取筛选、组装 bench
 ### 第 2 步 收取并筛选
 调用 `python3 scripts/orchestrator/collect_and_route.py`
 - 扫 `cache/`，找有 `.complete` 标记的目录，读 `score.json.total`：
-  - `> 3.5` → `papers/qualified/{subcategory}/{paper_id}/`（status=qualified）
-  - `< 3.0` → `papers/rejected/{subcategory}/{paper_id}/`（status=rejected）
-  - `3.0–3.5` → qualified 但标记 needs_human_review，不自动决定
+  - `>= 3.5` → `papers/qualified/{subcategory}/{paper_id}/`（status=qualified）
+  - `< 3.5` → `papers/rejected/{subcategory}/{paper_id}/`（status=rejected）
 
 ### 第 3 步 更新 phase
 调用 `python3 scripts/orchestrator/update_master.py`
@@ -57,16 +56,16 @@ description: TENGBench 编排中枢。分发论文、收取筛选、组装 bench
 每轮结束后检查：
 - `papers/inbox/` 无新 PDF
 - `cache/` 无目录
-- 所有论文状态 ∈ {qualified, rejected, needs_human_review}
+- 所有论文状态 ∈ {qualified, rejected}
 
 满足时输出并停止：
 ```
-全部论文处理完毕：{qualified} 篇合格，{rejected} 篇淘汰，{needs_human_review} 篇待人工复核。
+全部论文处理完毕：{qualified} 篇合格，{rejected} 篇淘汰。
 看板已更新到 phase=calibration。请手动启动校验 agent。
 ```
 未满足时继续下一轮。
 
 ## 输出规范
 - 每轮结束输出摘要（分发 N 篇、收取 M 篇、当前 phase）。
-- 边界论文（3.0–3.5）必须标记 needs_human_review，绝不自动决定去留。
+- score >= 3.5 自动 qualified，< 3.5 自动 rejected。
 - 所有脚本日志输出到 `logs/orchestrator/{date}.log`。
