@@ -178,7 +178,19 @@ def main():
             idx["original_filename"] = new_name
             index_f.write_text(json.dumps(idx, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    log("reviewer", f"[PAPER_ID] 完成：{paper_dir.name} -> {paper_id}")
+    # 重命名 cache 目录：{原始stem} -> {paper_id}
+    new_dir = paper_dir.parent / paper_id
+    if paper_dir.name != paper_id:
+        if new_dir.exists():
+            log("reviewer", f"[PAPER_ID] 警告：目标目录已存在 {new_dir}，跳过重命名")
+        else:
+            paper_dir.rename(new_dir)
+            log("reviewer", f"[PAPER_ID] 目录重命名：{paper_dir.name} -> {paper_id}")
+            paper_dir = new_dir
+    else:
+        log("reviewer", f"[PAPER_ID] 目录已是正确名称，跳过：{paper_dir.name}")
+
+    log("reviewer", f"[PAPER_ID] 完成：{paper_dir.name}")
     print(paper_id)  # 供调用方捕获
 
 
