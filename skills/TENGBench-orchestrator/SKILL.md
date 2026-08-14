@@ -35,7 +35,7 @@ description: TENGBench 编排中枢。分发论文、收取筛选、组装 bench
 ### 第 2 步 收取并筛选
 调用 `python3 scripts/orchestrator/collect_and_route.py`
 - 扫 `cache/`，找有 `.complete` 标记的目录，读 `score.json.total`：
-  - `>= 3.5` → `papers/qualified/{subcategory}/{paper_id}/`（status=qualified）
+  - `> 3.5` → `papers/qualified/{subcategory}/{paper_id}/`（status=qualified）
   - `< 3.0` → `papers/rejected/{subcategory}/{paper_id}/`（status=rejected）
   - `3.0–3.5` → qualified 但标记 needs_human_review，不自动决定
 

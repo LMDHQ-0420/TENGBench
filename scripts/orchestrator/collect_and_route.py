@@ -70,7 +70,7 @@ def main():
         qa_counts = count_qa(d)
         qa_total = sum(qa_counts.values())
 
-        if total >= 3.5:
+        if total > 3.5:
             dest, status = QUALIFIED / subcat / paper_id, "qualified"
         elif total < 3.0:
             dest, status = REJECTED / subcat / paper_id, "rejected"
