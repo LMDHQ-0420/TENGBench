@@ -60,20 +60,18 @@ description: TENGBench 审核出题。拿到一篇 TENG 论文 PDF，一次读�
 
 ## 四、工作流（每篇论文按顺序执行）
 
-### 第 1 步：解析与重命名
+### 第 1 步：解析论文
 
-1. 用 Read 工具直接读取 `cache/{paper_id}/paper.pdf`（或该目录下唯一的 PDF）（Claude 原生多模态，图文并读）。**禁止使用 `pdftotext`，禁止生成中间文本文件。**
-2. 确定论文身份信息：标题、作者、第一单位、期刊、年份、DOI。
-3. 生成 paper_id：`{first_author}{year}_{venue_short}_{topic}`
-   - 示例：`Xu2023_NatComm_stall`、`Wang2014_ACSNano_mode`
-   - venue_short 用常见缩写（NatComm / ACSNano / AdvMater / NanoEnergy / AFM …）
-   - topic 用 1–3 个词概括核心（stall / wearable / humidity …）
+用 Read 工具直接读取 `cache/{stem}/` 下的 PDF（Claude 原生多模态，图文并读）。**禁止使用 `pdftotext`，禁止生成中间文本文件。**
+确定论文身份信息：标题、作者列表、第一单位、期刊全称、年份、DOI。
 
 ### 第 2 步：建索引 index.json
 
+把以下字段写入 `cache/{stem}/index.json`（paper_id 暂时留空）：
+
 ```json
 {
-  "paper_id": "...",
+  "paper_id": "",
   "title": "...",
   "authors": ["..."],
   "first_affil": "...",
@@ -87,7 +85,25 @@ description: TENGBench 审核出题。拿到一篇 TENG 论文 PDF，一次读�
 
 subcategory 由你读完论文后判定，从受控 15 场景中选最匹配的一个（见第五章）。
 
-### 第 3 步：5 维打分 score.json
+### 第 3 步：生成 paper_id
+
+index.json 写完后，调用脚本生成规范 paper_id 并完成 PDF 重命名：
+
+```bash
+python3 scripts/reviewer_writer/generate_paper_id.py cache/{stem}/
+```
+
+脚本会：
+- 从 index.json 的 title/venue/date/authors/subcategory 字段自动拼接 paper_id
+- 格式：`{subcategory}_{venue_short}{year}_{lastname}_{word1}_{word2}_{word3}`
+- 示例：`aviation_NatComm2023_Xu_Triboelectric_Nanogenerator_Stall`
+- 把 paper_id 写回 index.json
+- 把 PDF 重命名为 `{paper_id}.pdf`
+- 输出 paper_id 字符串（供后续步骤引用）
+
+此后所有步骤使用脚本输出的 paper_id，不再手动拼接。
+
+### 第 4 步：5 维打分 score.json
 
 读论文相应部分，给每维 1–5 分 + 一句理由：
 
@@ -112,20 +128,20 @@ subcategory 由你读完论文后判定，从受控 15 场景中选最匹配的�
 
 > total = 加权平均。打分宁严勿宽，后续筛选阈值 >= 3.5 才合格。
 
-### 第 4 步：出题方向决策
+### 第 5 步：出题方向决策
 
 读论文内容，判断该论文能支撑哪些题型：
 - 对每个能支撑的题型，尽可能多出题，不设数量上限
 - DG3 特殊：仅当论文含明确器件几何参数（截面图/SEM 图/爆炸图中可读取尺寸/层数/阵列规格）时才出
 
-### 第 5 步：出题
+### 第 6 步：出题
 
 按出题准则和题型定义（见第五章）生成 QA。每题必含 source_excerpt（100–300 字原文关键片段 + 出处标注，仅供溯源，绝不放进题干）。
 
-### 第 6 步：写文件 + 回写状态
+### 第 7 步：写文件 + 回写状态
 
 - 每题一个 JSON，文件名格式：`{layer}_{type}_{subcategory}_{paper_id}_{题号}.json`
-  - 示例：`L1_BK1_triboelectric_mechanism_Xu2023_NatComm_stall_001.json`、`L2_RP1_aviation_Xu2023_NatComm_stall_001.json`、`L3_DG2_aviation_Xu2023_NatComm_stall_001.json`
+  - 示例：`L2_RP1_aviation_aviation_NatComm2023_Xu_Triboelectric_Nanogenerator_Stall_001.json`
 - 写到 `cache/{paper_id}/qa/`
 - 所有产物写完后，创建 `cache/{paper_id}/.complete` 空文件
 - 回写 `state/papers/{paper_id}.json`：填 score、qa_count、status="screened"、original_filename
