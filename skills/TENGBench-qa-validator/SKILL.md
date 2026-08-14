@@ -45,4 +45,3 @@ description: TENGBench 校验。在 phase=calibration 触发：题目抽检，�
 
 ## 输出规范
 - DG 题 rubric 纯定性得分点须修正后再打通过标记。
-- 所有操作写入运行日志。

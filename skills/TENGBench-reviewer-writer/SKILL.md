@@ -325,13 +325,6 @@ E. > 15 V
 
 > **为什么好：** 题干给出四组完整数值对比，正确答案 B 比 A 多出两个该场景特有的细节（STD 的风速无关性 + Prominence 对 hysteresis 的抑制），A/B 都像对的，区分需要多步推理。
 
-**推理链条：**
-1. M2（Prominence 处 T-signal）= 71%，显著低于 M1——说明 T-signal 不适合用 Prominence，T-signal 是连续振动信号，Prominence 针对孤立峰，在湍流中会误触发大量伪峰
-2. M3（STD 处 P-signal）= 83%，低于 M1——说明 P-signal 不适合用 STD，P-signal 是孤立突变峰，STD 在高湍流背景下基线抬升，阈值难以设定
-3. M4（两个 Prominence）= 79%，高于 M2 但低于 M1——Prominence 处理 P-signal 比 STD 好（M4>M3），但 Prominence 处理 T-signal 仍拖累整体
-4. 因此 M1 的关键在于：STD 对 T-signal 的连续统计特征敏感且对风速绝对值不敏感；Prominence 对 P-signal 孤立峰识别精准且能抑制湍流中的滞后伪峰
-5. A 只解释了配对逻辑，B 额外覆盖了 STD 的风速无关性和 Prominence 的 hysteresis 抑制——这两点是高湍流飞行场景的特有约束，B 是更完整的解释
-
 **背景：**
 某研究组在 NACA0012 翼型（弦长 20 cm）翼面部署摩擦电-压电耦合失速传感系统，在风洞（湍流度 < 0.2%，风速 40 m/s）中完成标定后，在高湍流度飞行环境（湍流度 > 1%）中进行实际测试。研究者对比了四种信号处理方案在 100 次独立失速测试中的预警准确率：
 
@@ -356,6 +349,13 @@ D. M2 方案（Prominence 处理 T-signal）准确率低是因为 T-signal 的�
 E. STD 处理 T-signal 适合低信噪比场景（T-signal 在接近失速时幅度本身下降），Prominence 处理 P-signal 适合高信噪比场景（P-signal 出现时幅度骤增），M1 的高准确率来自算法与信号信噪比特征的匹配
 
 **答案：B**
+
+**推理链条：**
+1. M2（Prominence 处 T-signal）= 71%，显著低于 M1——说明 T-signal 不适合用 Prominence，T-signal 是连续振动信号，Prominence 针对孤立峰，在湍流中会误触发大量伪峰
+2. M3（STD 处 P-signal）= 83%，低于 M1——说明 P-signal 不适合用 STD，P-signal 是孤立突变峰，STD 在高湍流背景下基线抬升，阈值难以设定
+3. M4（两个 Prominence）= 79%，高于 M2 但低于 M1——Prominence 处理 P-signal 比 STD 好（M4>M3），但 Prominence 处理 T-signal 仍拖累整体
+4. 因此 M1 的关键在于：STD 对 T-signal 的连续统计特征敏感且对风速绝对值不敏感；Prominence 对 P-signal 孤立峰识别精准且能抑制湍流中的滞后伪峰
+5. A 只解释了配对逻辑，B 额外覆盖了 STD 的风速无关性和 Prominence 的 hysteresis 抑制——这两点是高湍流飞行场景的特有约束，B 是更完整的解释
 
 ---
 
