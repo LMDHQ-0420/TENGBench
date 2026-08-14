@@ -15,15 +15,15 @@ description: TENGBench 审核出题。拿到一篇 TENG 论文 PDF，一次读�
 
 ### 启动纪律
 1. 只在当前工作目录及其子目录活动，所有路径相对当前目录写，绝不向上跳出。
-2. 启动即扫描 `cache/` 下有 PDF 但无 `.complete` 的目录，不先探索项目结构、不读其他 agent 的 SKILL、不读 scripts/orchestrator 的脚本。
+2. 启动即扫描 `cache/` 下有 PDF 但无 `.complete` 的目录，不先探索项目结构、不读其他 agent 的 SKILL、不读其他模块的脚本。
 3. 你需要的所有信息都在本 SKILL 里，直接执行。
 4. 所有信息都在本 SKILL 里，不需要读任何外部状态文件，不扫其他目录。
 
 ### 权限边界
 - **能读**：`cache/`（扫描待处理目录）、`state/master.json`（只读 phase）
 - **能写**：`cache/{paper_id}/`、`state/papers/{paper_id}.json`
-- **能调用**：`python3 scripts/reviewer_writer/qa_schema_validator.py`
-- **禁止**：不向上跳出当前目录；不读/不跑 scripts/orchestrator 脚本；不动 papers/inbox、papers/qualified、papers/rejected；不写 state/master.json；不读其他 agent 的 SKILL 或代码。
+- **能调用**：调用 paper_id 生成工具；调用 QA 格式校验工具
+- **禁止**：不向上跳出当前目录；不读/不跑其他模块脚本；不动 papers/inbox、papers/qualified、papers/rejected；不写 state/master.json；不读其他 agent 的 SKILL 或代码。
 
 ### 多智能体并发
 当 `cache/` 下有多个待处理目录时：
@@ -86,21 +86,16 @@ subcategory 由你读完论文后判定，从受控 15 场景中选最匹配的�
 
 ### 第 3 步：生成 paper_id
 
-index.json 写完后，调用脚本生成规范 paper_id 并完成 PDF 重命名：
-
-```bash
-python3 scripts/reviewer_writer/generate_paper_id.py cache/{stem}/
-```
-
-脚本会：
+index.json 写完后，调用 paper_id 生成工具，传入当前论文目录路径。工具会：
 - 从 index.json 的 title/venue/date/authors/subcategory 字段自动拼接 paper_id
 - 格式：`{subcategory}_{venue_short}{year}_{lastname}_{word1}_{word2}_{word3}`
 - 示例：`aviation_NatComm2023_Xu_Triboelectric_Nanogenerator_Stall`
 - 把 paper_id 写回 index.json
 - 把 PDF 重命名为 `{paper_id}.pdf`
+- 把目录重命名为 `{paper_id}/`
 - 输出 paper_id 字符串（供后续步骤引用）
 
-此后所有步骤使用脚本输出的 paper_id，不再手动拼接。
+此后所有步骤使用工具输出的 paper_id，不再手动拼接。
 
 ### 第 4 步：5 维打分 score.json
 
@@ -379,5 +374,4 @@ subcategory 受控列表（L2/L3 题从 15 个传感场景中选最匹配一个�
 - 每篇论文独立处理，独立写自己的 `cache/{paper_id}/`，互不干扰。
 - 不得编造论文没有的内容，每题的 source_excerpt 必须真实来自该论文。
 - 每题必附 source_excerpt（100–300 字 + 出处），仅供溯源，绝不放进题干。
-- 输出严格符合 schema，写完用 `scripts/reviewer_writer/qa_schema_validator.py` 自检，不过则修正。
-- 运行摘要追加到 `code/logs/reviewer_writer/{date}.log`：记录 paper_id / 出题数 / 各题型数 / 打分。
+- 输出严格符合 schema，写完调用 QA 格式校验工具自检，不过则修正。

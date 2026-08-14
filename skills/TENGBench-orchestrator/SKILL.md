@@ -6,10 +6,10 @@ description: TENGBench 编排中枢。分发论文、收取筛选、组装 bench
 # TENGBench-orchestrator
 
 ## 职责
-流水线中枢。所有文件移动通过 py 脚本完成，不手动操作。唯一写 `state/master.json` 的角色。
+流水线中枢。唯一负责移动文件和写 `state/master.json` 的角色。所有文件操作通过调用内置脚本完成，不手动操作。
 
 ## 运行模式
-单线顺序，每轮依次执行第1–4步，脚本批量处理当前所有积压论文/产物。
+单线顺序，每轮依次执行第 1–4 步，批量处理当前所有积压论文及产物。
 
 ## 启动纪律
 1. 只在当前工作目录及其子目录活动，绝不向上跳出。
@@ -18,45 +18,41 @@ description: TENGBench 编排中枢。分发论文、收取筛选、组装 bench
 
 ## 权限
 - 能读：`papers/inbox/`、`cache/`、`state/master.json`、`state/papers/`、`papers/qualified/`
-- 能写：`state/master.json`（唯一写）
-- 能调用：
-  - `python3 scripts/orchestrator/distribute_papers.py`
-  - `python3 scripts/orchestrator/collect_and_route.py`
-  - `python3 scripts/orchestrator/update_master.py`
-  - `python3 scripts/orchestrator/assemble_benchmark.py`
+- 能写：`state/master.json`（唯一写入方）
+- 能调用：分发脚本、筛选路由脚本、phase 更新脚本、benchmark 组装脚本
 - 禁止：不手动移动/复制文件；不直接写 `papers/` 下文件；不读其他 agent 的 SKILL 或脚本源码。
 
 ## 工作流
 
 ### 第 1 步 分发新论文
-调用 `python3 scripts/orchestrator/distribute_papers.py`
-- 扫 `papers/inbox/` 的新 PDF，登记到 `state/papers/`，搬到 `cache/{stem}/`。
+调用分发脚本：
+- 扫描 `papers/inbox/` 中的新 PDF，登记到状态目录，搬入各自的 cache 工作目录，等待后续处理。
 
 ### 第 2 步 收取并筛选
-调用 `python3 scripts/orchestrator/collect_and_route.py`
-- 扫 `cache/`，找有 `.complete` 标记的目录，读 `score.json.total`：
-  - `>= 3.5` → `papers/qualified/{subcategory}/{paper_id}/`（status=qualified）
-  - `< 3.5` → `papers/rejected/{subcategory}/{paper_id}/`（status=rejected）
+调用筛选路由脚本：
+- 扫描 cache 工作目录，找到已完成审核的论文，读取其质量总分：
+  - `>= 3.5` → 移入 `papers/qualified/`，标记为 qualified
+  - `< 3.5` → 移入 `papers/rejected/`，标记为 rejected
 
 ### 第 3 步 更新 phase
-调用 `python3 scripts/orchestrator/update_master.py`
-- inbox 和 cache 同时清空时，phase 自动从 screening 切到 calibration。
-- 切到 calibration 时输出提示：
+调用 phase 更新脚本：
+- 当 inbox 和 cache 同时清空时，phase 自动从 screening 切到 calibration。
+- 切换后输出提示：
   ```
   所有论文处理完毕，phase=calibration。请手动启动校验 agent 进行质检。
   ```
 
 ### 第 4 步 组装 benchmark
-调用 `python3 scripts/orchestrator/assemble_benchmark.py`
-- 前置条件：phase=calibration 且 `papers/qualified/.validated` 存在。
-- 扫 `papers/qualified/*/*/qa/*.json`，跳过有 `.rejected` 标记的题，复制到 `benchmark/questions/{layer}/`。
+调用 benchmark 组装脚本：
+- 前置条件：phase=calibration 且校验 agent 已完成质检并发出组装信号。
+- 扫描 `papers/qualified/` 下各论文的 QA 产物，跳过被标记为拒绝的题目，按层级复制到 `benchmark/questions/` 对应目录。
 - 完成后 phase 切到 ready。
 
 ## 终止条件
 每轮结束后检查：
 - `papers/inbox/` 无新 PDF
-- `cache/` 无目录
-- 所有论文状态 ∈ {qualified, rejected}
+- cache 中无待处理目录
+- 所有论文状态均为 qualified 或 rejected
 
 满足时输出并停止：
 ```
@@ -67,5 +63,4 @@ description: TENGBench 编排中枢。分发论文、收取筛选、组装 bench
 
 ## 输出规范
 - 每轮结束输出摘要（分发 N 篇、收取 M 篇、当前 phase）。
-- score >= 3.5 自动 qualified，< 3.5 自动 rejected。
-- 所有脚本日志输出到 `logs/orchestrator/{date}.log`。
+- 质量总分 >= 3.5 自动 qualified，< 3.5 自动 rejected。
