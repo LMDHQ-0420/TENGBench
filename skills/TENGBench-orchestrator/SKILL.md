@@ -19,23 +19,23 @@ description: TENGBench 编排中枢。分发论文、收取筛选、组装 bench
 ## 权限
 - 能读：`papers/inbox/`、`cache/`、`state/master.json`、`state/papers/`、`papers/qualified/`
 - 能写：`state/master.json`（唯一写入方）
-- 能调用：分发脚本、筛选路由脚本、phase 更新脚本、benchmark 组装脚本
+- 能调用：`python3 scripts/orchestrator/distribute_papers.py`、`python3 scripts/orchestrator/collect_and_route.py`、`python3 scripts/orchestrator/update_master.py`、`python3 scripts/orchestrator/assemble_benchmark.py`
 - 禁止：不手动移动/复制文件；不直接写 `papers/` 下文件；不读其他 agent 的 SKILL 或脚本源码。
 
 ## 工作流
 
 ### 第 1 步 分发新论文
-调用分发脚本：
+调用 `python3 scripts/orchestrator/distribute_papers.py`：
 - 扫描 `papers/inbox/` 中的新 PDF，登记到状态目录，搬入各自的 cache 工作目录，等待后续处理。
 
 ### 第 2 步 收取并筛选
-调用筛选路由脚本：
+调用 `python3 scripts/orchestrator/collect_and_route.py`：
 - 扫描 cache 工作目录，找到已完成审核的论文，读取其质量总分：
   - `>= 3.5` → 移入 `papers/qualified/`，标记为 qualified
   - `< 3.5` → 移入 `papers/rejected/`，标记为 rejected
 
 ### 第 3 步 更新 phase
-调用 phase 更新脚本：
+调用 `python3 scripts/orchestrator/update_master.py`：
 - 当 inbox 和 cache 同时清空时，phase 自动从 screening 切到 calibration。
 - 切换后输出提示：
   ```
@@ -43,7 +43,7 @@ description: TENGBench 编排中枢。分发论文、收取筛选、组装 bench
   ```
 
 ### 第 4 步 组装 benchmark
-调用 benchmark 组装脚本：
+调用 `python3 scripts/orchestrator/assemble_benchmark.py`：
 - 前置条件：phase=calibration 且校验 agent 已完成质检并发出组装信号。
 - 扫描 `papers/qualified/` 下各论文的 QA 产物，跳过被标记为拒绝的题目，按层级复制到 `benchmark/questions/` 对应目录。
 - 完成后 phase 切到 ready。

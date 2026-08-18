@@ -22,7 +22,7 @@ description: TENGBench 审核出题。拿到一篇 TENG 论文 PDF，一次读�
 ### 权限边界
 - **能读**：`cache/`（扫描待处理目录）、`state/master.json`（只读 phase）
 - **能写**：`cache/{paper_id}/`、`state/papers/{paper_id}.json`
-- **能调用**：调用 paper_id 生成工具；调用 QA 格式校验工具
+- **能调用**：`python3 scripts/reviewer_writer/generate_paper_id.py <cache_paper_dir>`；`python3 scripts/reviewer_writer/qa_schema_validator.py <qa_file>`
 - **禁止**：不向上跳出当前目录；不读/不跑其他模块脚本；不动 papers/inbox、papers/qualified、papers/rejected；不写 state/master.json；不读其他 agent 的 SKILL 或代码。
 
 ### 多智能体并发
@@ -86,7 +86,11 @@ subcategory 由你读完论文后判定，从受控 15 场景中选最匹配的�
 
 ### 第 3 步：生成 paper_id
 
-index.json 写完后，调用 paper_id 生成工具，传入当前论文目录路径。工具会：
+index.json 写完后，运行：
+```
+python3 scripts/reviewer_writer/generate_paper_id.py <当前论文目录路径>
+```
+工具会：
 - 从 index.json 的 title/venue/date/authors/subcategory 字段自动拼接 paper_id
 - 格式：`{subcategory}_{venue_short}{year}_{lastname}_{word1}_{word2}_{word3}`
 - 示例：`aviation_NatComm2023_Xu_Triboelectric_Nanogenerator_Stall`
@@ -642,7 +646,7 @@ subcategory 受控列表（L2/L3 题从 15 个传感场景中选最匹配一个�
 
 ## 六、QA JSON Schema
 
-写完用 `scripts/reviewer_writer/qa_schema_validator.py` 自检，不过则修正。
+写完用 `python3 scripts/reviewer_writer/qa_schema_validator.py <qa_file>` 自检，不过则修正。
 
 ### 通用字段（所有题型）
 
@@ -715,4 +719,4 @@ subcategory 受控列表（L2/L3 题从 15 个传感场景中选最匹配一个�
 - 每篇论文独立处理，独立写自己的 `cache/{paper_id}/`，互不干扰。
 - 不得编造论文没有的内容，每题的 source_excerpt 必须真实来自该论文。
 - 每题必附 source_excerpt（100–300 字 + 出处），仅供溯源，绝不放进题干。
-- 输出严格符合 schema，写完调用 QA 格式校验工具自检，不过则修正。
+- 输出严格符合 schema，写完用 `python3 scripts/reviewer_writer/qa_schema_validator.py <qa_file>` 自检，不过则修正。
