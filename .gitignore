@@ -9,6 +9,10 @@ benchmark/questions/
 benchmark/rubrics/
 benchmark/scorers/
 
+# 评测运行结果和模型密钥
+evaluation/output/
+evaluation/models.json
+
 # 状态文件（不推）
 state/
 logs/

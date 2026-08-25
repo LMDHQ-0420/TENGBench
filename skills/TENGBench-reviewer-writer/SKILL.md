@@ -1,73 +1,79 @@
 ---
 name: TENGBench-reviewer-writer
-description: TENGBench 审核出题。拿到一篇 TENG 论文 PDF，一次读完，完成重命名、建索引、5 维质量打分、尽可能多地生成各题型 QA，输出到 cache/{paper_id}/ 文件夹。
+description: "TENGBench paper review and question writing. Given one TENG paper PDF, read it once, rename it, build its index, assign a five-dimensional quality score, and generate as many QA items as possible under cache/{paper_id}/."
 ---
 
 # TENGBench-reviewer-writer
 
-## 一、职责概述
+## 1. Responsibilities
 
-你是 TENGBench 的 TENG 领域专家 + 出题专家。拿到一篇 TENG 论文 PDF，一次读完，完成四件事：规范重命名、建论文索引、5 维质量打分、尽可能多地生成各题型 QA。一次任务在同一个 context 内完成全部步骤（论文只读一次，省 token）。
-
----
-
-## 二、运行规则
-
-### 启动纪律
-1. 只在当前工作目录及其子目录活动，所有路径相对当前目录写，绝不向上跳出。
-2. 启动即扫描 `cache/` 下有 PDF 但无 `.complete` 的目录，不先探索项目结构、不读其他 agent 的 SKILL、不读其他模块的脚本。
-3. 你需要的所有信息都在本 SKILL 里，直接执行。
-4. 所有信息都在本 SKILL 里，不需要读任何外部状态文件，不扫其他目录。
-
-### 权限边界
-- **能读**：`cache/`（扫描待处理目录）、`state/master.json`（只读 phase）
-- **能写**：`cache/{paper_id}/`、`state/papers/{paper_id}.json`
-- **能调用**：`python3 scripts/reviewer_writer/generate_paper_id.py <cache_paper_dir>`；`python3 scripts/reviewer_writer/qa_schema_validator.py <qa_file>`
-- **禁止**：不向上跳出当前目录；不读/不跑其他模块脚本；不动 papers/inbox、papers/qualified、papers/rejected；不写 state/master.json；不读其他 agent 的 SKILL 或代码。
-
-### 多智能体并发
-当 `cache/` 下有多个待处理目录时：
-- 对每个目录派一个子 agent（Task 工具，subagent_type=general-purpose），并发度建议 3–5 个。
-- 每个子 agent 独立写自己的 `cache/{paper_id}/`，互不干扰。
-- 等所有子 agent 完成后，收集结果，重新扫描。
-- 单篇论文时直接自己处理，不必派子 agent。
-
-### 终止条件
-- 循环处理：扫描 → 处理 → 重新扫描。
-- 无待处理 PDF 时，每隔 20 分钟自动重新扫描，输出：
-  ```
-  [reviewer-writer] 当前无待处理论文，20 分钟后再次检查。已处理：{n} 篇。
-  ```
-- 若 `state/master.json` 的 phase 已到 calibration，停止轮询，输出：
-  ```
-  reviewer-writer：所有论文处理完毕，phase=calibration。请手动关闭审核出题 agent。
-  ```
+You are a TENG-domain expert and benchmark question writer for TENGBench. Given one TENG paper PDF, read it once and complete four tasks: normalize the filename, build the paper index, assign a five-dimensional quality score, and generate as many QA items as possible. Complete the entire task in the same context (read the paper only once to save tokens).
 
 ---
 
-## 三、输入 / 输出
+## 2. Operating rules
 
-| 方向 | 路径 | 说明 |
+### Startup discipline
+
+1. Work only in the current working directory and its descendants. Write all paths relative to the current directory and never move upward.
+2. At startup, scan `cache/` for directories containing a PDF but no `.complete` marker. Do not first explore the project structure, read other agents' SKILL files, or read scripts from other modules.
+3. All information you need is in this SKILL; execute directly.
+4. All information you need is in this SKILL; do not read external state files or scan other directories.
+
+### Permission boundaries
+
+- **Can read:** `cache/` (scan pending directories), `state/master.json` (read-only phase check)
+- **Can write:** `cache/{paper_id}/`, `state/papers/{paper_id}.json`
+- **Can call:** `python3 scripts/reviewer_writer/generate_paper_id.py <cache_paper_dir>`; `python3 scripts/reviewer_writer/qa_schema_validator.py <qa_file>`
+- **Prohibited:** moving upward from the current directory; reading or running scripts from other modules; touching `papers/inbox`, `papers/qualified`, or `papers/rejected`; writing `state/master.json`; reading other agents' SKILL files or code.
+
+### Multi-agent concurrency
+
+When `cache/` contains multiple pending directories:
+
+- Dispatch one sub-agent per directory (Task tool, `subagent_type=general-purpose`), with a recommended concurrency of 3–5.
+- Each sub-agent writes only to its own `cache/{paper_id}/`; they must not interfere with one another.
+- Wait for all sub-agents to finish, collect their results, and scan again.
+- For a single paper, process it directly without dispatching a sub-agent.
+
+### Termination conditions
+
+- Process in a loop: scan → process → scan again.
+- When no PDF is pending, scan again automatically every 20 minutes and output:
+  ```
+  [reviewer-writer] No papers are currently pending; checking again in 20 minutes. Processed so far: {n} papers.
+  ```
+- If the `phase` in `state/master.json` has reached `calibration`, stop polling and output:
+  ```
+  reviewer-writer: All papers have been processed; phase=calibration. Please close the paper review and question-writing agent manually.
+  ```
+
+---
+
+## 3. Input and output
+
+| Direction | Path | Description |
 |---|---|---|
-| 输入 | `cache/{paper_id}/paper.pdf` | 待审 TENG 论文 |
-| 输出 | `cache/{paper_id}/index.json` | 论文索引 |
-| 输出 | `cache/{paper_id}/score.json` | 5 维打分 |
-| 输出 | `cache/{paper_id}/qa/{qa_id}.json` | 每题一个文件 |
-| 状态回写 | `state/papers/{paper_id}.json` | score、qa_count、status="screened" |
-| 完成标记 | `cache/{paper_id}/.complete` | 存在则跳过，防止重复处理 |
+| Input | `cache/{paper_id}/paper.pdf` | TENG paper waiting for review |
+| Output | `cache/{paper_id}/index.json` | Paper index |
+| Output | `cache/{paper_id}/score.json` | Five-dimensional score |
+| Output | `cache/{paper_id}/qa/{qa_id}.json` | One file per question |
+| State update | `state/papers/{paper_id}.json` | score, qa_count, status=`screened` |
+| Completion marker | `cache/{paper_id}/.complete` | When present, skip the paper to prevent duplicate processing |
 
 ---
 
-## 四、工作流（每篇论文按顺序执行）
+## 4. Workflow (execute in order for each paper)
 
-### 第 1 步：解析论文
+### Step 1: Parse the paper
 
-用 Read 工具直接读取 `cache/{stem}/` 下的 PDF（Claude 原生多模态，图文并读）。**禁止使用 `pdftotext`，禁止生成中间文本文件。**
-确定论文身份信息：标题、作者列表、第一单位、期刊全称、年份、DOI。
+Use the Read tool to read the PDF directly under `cache/{stem}/` (Claude's native multimodal reading supports text and figures together). **Do not use `pdftotext` and do not create intermediate text files.**
 
-### 第 2 步：建索引 index.json
+Determine the paper identity: title, complete author list, first affiliation, full journal name, publication year, and DOI.
 
-把以下字段写入 `cache/{stem}/index.json`（paper_id 暂时留空）：
+### Step 2: Build `index.json`
+
+Write the following fields to `cache/{stem}/index.json` (`paper_id` is temporarily empty):
 
 ```json
 {
@@ -75,43 +81,46 @@ description: TENGBench 审核出题。拿到一篇 TENG 论文 PDF，一次读�
   "title": "...",
   "authors": ["..."],
   "first_affil": "...",
-  "venue": "期刊全称",
+  "venue": "Full journal name",
   "doi": "...",
   "date": "YYYY-MM",
   "subcategory": "aviation|wearable|tactile|chemical|hmi|iot|biomedical|marine|wind|motion|acoustic|robotics|smarttextile|energyharv|space"
 }
 ```
 
-subcategory 由你读完论文后判定，从受控 15 场景中选最匹配的一个（见第五章）。
+After reading the paper, choose the single best-matching subcategory from the controlled list of 15 scenarios (see Section 5.7).
 
-### 第 3 步：生成 paper_id
+### Step 3: Generate `paper_id`
 
-index.json 写完后，运行：
+After writing `index.json`, run:
+
 ```
-python3 scripts/reviewer_writer/generate_paper_id.py <当前论文目录路径>
+python3 scripts/reviewer_writer/generate_paper_id.py <current_paper_directory>
 ```
-工具会：
-- 从 index.json 的 title/venue/date/authors/subcategory 字段自动拼接 paper_id
-- 格式：`{subcategory}_{venue_short}{year}_{lastname}_{word1}_{word2}_{word3}`
-- 示例：`aviation_NatComm2023_Xu_Triboelectric_Nanogenerator_Stall`
-- 把 paper_id 写回 index.json
-- 把 PDF 重命名为 `{paper_id}.pdf`
-- 把目录重命名为 `{paper_id}/`
-- 输出 paper_id 字符串（供后续步骤引用）
 
-此后所有步骤使用工具输出的 paper_id，不再手动拼接。
+The tool will:
 
-### 第 4 步：5 维打分 score.json
+- automatically construct `paper_id` from the `title`, `venue`, `date`, `authors`, and `subcategory` fields in `index.json`;
+- use the format `{subcategory}_{venue_short}{year}_{lastname}_{word1}_{word2}_{word3}`;
+- produce an example such as `aviation_NatComm2023_Xu_Triboelectric_Nanogenerator_Stall`;
+- write `paper_id` back to `index.json`;
+- rename the PDF to `{paper_id}.pdf`;
+- rename the directory to `{paper_id}/`;
+- print the paper ID for use in subsequent steps.
 
-读论文相应部分，给每维 1–5 分 + 一句理由：
+From this point onward, use the paper ID returned by the tool; do not assemble it manually.
 
-| 维度 | 权重 | 读取依据 |
-|---|---|---|
-| relevance（领域相关性）| 0.25 | 标题 + 摘要 + 引言 |
-| questionability（可出题性）| 0.25 | 方法 / 器件 / 结果章节 |
-| richness（信息丰富度）| 0.20 | 通览各章节，判断能出几种题型 |
-| novelty（新颖性）| 0.15 | 发表年份（2023+ 给高分）|
-| clarity（表述清晰度）| 0.15 | 图表 + 器件/方法描述是否明确 |
+### Step 4: Assign the five-dimensional score
+
+Read the relevant parts of the paper and assign each dimension a score from 1 to 5 with one-sentence reasoning:
+
+| Dimension | Weight | Evidence to read |
+|---|---:|---|
+| relevance (domain relevance) | 0.25 | Title, abstract, introduction |
+| questionability (question-writing potential) | 0.25 | Methods, device, and results sections |
+| richness (information richness) | 0.20 | Survey all sections and estimate how many question types are supported |
+| novelty | 0.15 | Publication year (2023+ receives a high score) |
+| clarity (clarity of presentation) | 0.15 | Whether figures, tables, and device/method descriptions are clear |
 
 ```json
 {
@@ -124,163 +133,151 @@ python3 scripts/reviewer_writer/generate_paper_id.py <当前论文目录路径>
 }
 ```
 
-> total = 加权平均。打分宁严勿宽，后续筛选阈值 >= 3.5 才合格。
+> `total` is the weighted average. Be strict rather than generous; only papers with a screening threshold of `>= 3.5` qualify.
 
-### 第 5 步：出题方向决策
+### Step 5: Decide which question types the paper supports
 
-读论文内容，判断该论文能支撑哪些题型：
-- 对每个能支撑的题型，尽可能多出题，不设数量上限
-- **DG1/DG2/DG3 为必出题型，禁止跳过**：DG1 只考 TENG 叠层本体（逐层材料/厚度/界面），任何有实体器件的论文都能出；DG2 考完整系统流程（器件→阵列→采集→判定），结构简单时重心向信号处理环节倾斜；DG3 考三维建模，结构简单时考拓扑正确性。「结构太简单」「缺少精确截面图」「论文重点在算法/系统级」都不是跳过理由。唯一允许跳过的情形：论文完全没有描述任何实体器件（纯理论/纯模拟论文），此时须在日志中明确记录跳过原因
+Read the paper and determine which question types it can support:
 
-### 第 6 步：出题
+- For every supported type, write as many questions as possible; there is no upper limit.
+- **DG1/DG2/DG3 are mandatory and must not be skipped:** DG1 tests the TENG stack itself (material/thickness/interface of every layer); any paper with a physical device can support it. DG2 tests the complete system workflow (device → array → acquisition → decision); for simple structures, shift the focus toward signal processing. DG3 tests 3D modeling; for simple structures, test topological correctness. “The structure is too simple,” “there is no precise cross-sectional figure,” and “the paper focuses on algorithms or the system level” are not valid reasons to skip them. The only permitted skip is a paper that describes no physical device at all (pure theory or pure simulation); record the reason explicitly in the log.
 
-按出题准则和题型定义（见第五章）生成 QA。每题必含 source_excerpt（100–300 字原文关键片段 + 出处标注，仅供溯源，绝不放进题干）。
+### Step 6: Write the questions
 
-### 第 7 步：写文件 + 回写状态
+Generate QA items according to the question-writing rules and type definitions in Section 5. Every question must contain `source_excerpt` (a 100–300-word key excerpt from the paper with a source label, used only for traceability and never placed in the question stem).
 
-- 每题一个 JSON，文件名格式：`{layer}_{type}_{subcategory}_{paper_id}_{题号}.json`
-  - 示例：`L2_RP1_aviation_aviation_NatComm2023_Xu_Triboelectric_Nanogenerator_Stall_001.json`
-- 写到 `cache/{paper_id}/qa/`
-- 所有产物写完后，创建 `cache/{paper_id}/.complete` 空文件
-- 回写 `state/papers/{paper_id}.json`：填 score、qa_count、status="screened"
+### Step 7: Write files and update state
+
+- Use the filename format `{layer}_{type}_{subcategory}_{paper_id}_{number}.json`.
+  - Example: `L2_RP1_aviation_aviation_NatComm2023_Xu_Triboelectric_Nanogenerator_Stall_001.json`
+- Write the files to `cache/{paper_id}/qa/`.
+- After all artifacts have been written, create the empty file `cache/{paper_id}/.complete`.
+- Update `state/papers/{paper_id}.json` with the score, `qa_count`, and `status="screened"`.
 
 ---
 
-## 五、出题规范
+## 5. Question-writing rules
 
-### 5.1 题型定义
+### 5.1 Question types
 
-**总纲**：所有题型聚焦各自主题，出题内容的落点必须在数据上——性能数值、参数量级、变化倍数、区间判断，不接受纯定性描述作为答案或评分依据。
+**General rule:** Every type must focus on its own topic, and the answer must land on data—performance values, parameter magnitudes, fold changes, or range judgments. Purely qualitative descriptions are not acceptable as answers or scoring evidence.
 
-#### L1 基础层（BK，不绑定论文）
+#### L1 Basic layer (BK, not tied to a paper scenario)
 
-每道 BK 题的 subcategory 从该题型对应的候选子方向中选最匹配的一个：
+Choose the subcategory for each BK question from the candidate subcategories associated with that type:
 
-| 题型 | 主题 | subcategory 候选 |
+| Type | Topic | Candidate subcategories |
 |---|---|---|
-| BK1 基础理论 | 接触起电、静电感应、位移电流的机制与边界条件 | `triboelectric_mechanism` / `electrostatic_induction` / `displacement_current` |
-| BK2 工作模式 | 四种工作模式的适用条件与性能边界 | `contact_separation` / `sliding` / `single_electrode` / `freestanding` |
-| BK3 材料极性 | 摩擦电序与表面改性工艺的效果 | `triboelectric_series` / `surface_modification` |
-| BK4 性能指标 | Voc / Isc / Qsc / Pmax 之间的耦合关系与工程权衡 | `output_coupling` / `impedance_matching` |
+| BK1 Basic theory | Mechanisms and boundary conditions of contact electrification, electrostatic induction, and displacement current | `triboelectric_mechanism` / `electrostatic_induction` / `displacement_current` |
+| BK2 Operating modes | Applicable conditions and performance boundaries of the four operating modes | `contact_separation` / `sliding` / `single_electrode` / `freestanding` |
+| BK3 Material polarity | Triboelectric series and the effects of surface-modification processes | `triboelectric_series` / `surface_modification` |
+| BK4 Performance metrics | Coupling relationships and engineering trade-offs among Voc / Isc / Qsc / Pmax | `output_coupling` / `impedance_matching` |
 
-#### L2 推理层（RP，绑定论文场景）
+#### L2 Reasoning layer (RP, tied to a paper scenario)
 
-| 题型 | 主题 |
+| Type | Topic |
 |---|---|
-| RP1 基于材料的性能 | 材料替换或掺杂比例变化对性能的影响 |
-| RP2 基于结构的性能 | 几何参数、层数、阵列规格变化对性能的影响 |
-| RP3 基于场景的性能 | 激励条件、环境参数变化对性能的影响 |
-| RP4 长推理 | 给出多组对比实验数值，需多步推理才能得出结论 |
+| RP1 Material-based performance | Effect of material replacement or dopant-ratio changes on performance |
+| RP2 Structure-based performance | Effect of geometric parameters, layer count, or array specifications on performance |
+| RP3 Scenario-based performance | Effect of excitation conditions or environmental parameters on performance |
+| RP4 Long reasoning | Given multiple comparative experimental values, draw a conclusion through multi-step reasoning |
 
-RP1/RP2/RP3 为纯选择题（不附推理步骤），RP4 必须附 multi_step_reasoning。
+RP1/RP2/RP3 are pure multiple-choice questions (do not attach reasoning steps). RP4 must include `multi_step_reasoning`.
 
-#### L3 设计层（DG，开放作答）
+#### L3 Design layer (DG, open-ended answers)
 
-| 题型 | 主题 |
+| Type | Topic |
 |---|---|
-| DG1 TENG 层级设计 | 只考 TENG 叠层本体：逐层设计各功能层的材料、厚度、界面与叠层顺序 |
-| DG2 传感系统完整设计 | 器件结构 + 阵列/封装集成 + 信号调理采集 + 信号处理判定的一整套流程 |
-| DG3 三维结构建模 | 给出完整几何参数，生成 CAD 模型 |
+| DG1 TENG layer design | Only the TENG stack itself: materials, thicknesses, interfaces, and stacking order of each functional layer |
+| DG2 Complete sensing-system design | A complete workflow covering device structure, array/packaging integration, signal conditioning/acquisition, and signal processing/decision |
+| DG3 3D structural modeling | Generate a CAD model from complete geometric parameters |
+
+### 5.2 Question-writing principles
+
+**Principle 1: Questions must be self-contained; do not use paper-specific terminology**
+
+When answering, the evaluated model may rely only on its own knowledge and the question text. It cannot see the paper, `source_excerpt`, or other questions from the same paper. Therefore:
+
+- Never use paper-invented terminology in `question`, `options`, `rubric`, or `required_parts`, including paper-created abbreviations, custom labels, and internal names. Such terms are unseen by the model and invalidate the question.
+- Every question stem must independently state all scenario information needed for that question. Do not omit information with references such as “the above scenario,” “as described earlier,” or “this unit.” Even if one paper produces ten RP questions, each stem must restate its own scenario.
+- The paper provides scenario and numerical material, not terminology. Translate the paper into general language that a model can understand from its own knowledge: use “a modified silk-protein triboelectric layer” instead of a paper abbreviation and “triboelectric signal” instead of an internal label.
+- The stem may use only standard domain terms (contact electrification, electrostatic induction, contact-separation mode, PTFE/PDMS/nylon/silk fibroin, piezoelectric effect, angle of attack/stall/boundary-layer separation, wind speed, etc.) and scenario descriptions explicitly defined in the stem.
+- If an L2/L3 question must be scenario-bound, first introduce the required scenario and measured quantity in general language, then ask the question.
+
+**Principle 2: Question information must be neutral and must not reveal the reasoning path**
+
+The stem presents scenario parameters and observed phenomena, but does not provide general knowledge, formulas, or mechanism explanations. The evaluated model must complete all reasoning independently.
+
+- Give constraints only as numerical boundaries; do not attach material properties or mechanism descriptions, because those descriptions reveal the answer direction.
+- Do not use leading wording such as “to improve sensitivity” or “because of boundary-layer separation.” State only what happened, not why.
+- RP4 options present only a numerical conclusion or conclusion judgment, without explanatory reasons.
+- DG questions provide no reference solution, comparison data, or design-direction hints. Rubric deductions should target common incorrect reasoning paths, not merely missing bonus points.
+
+**Principle 3: For every L1/L2 multiple-choice question, the answer must be a specific number**
+
+This is a core constraint. Rewrite any question that fails it.
+
+1. **All five options must be specific values, not prose.** Options may not contain mode names, mechanism explanations, or design descriptions. All five must be in the same order of magnitude, with adjacent values roughly 1.5–2× apart. Do not use ranges such as “2–6 V”; each option must be one exact value.
+2. **All numerical values must come from the paper.** The stem parameters, option values, and correct answer must trace to measured values or geometric/material parameters stated by the paper. Standard physical constants (ε₀, elastic modulus, etc.) may be cited directly, but device-level values (voltage, mass, dimensions, accuracy, etc.) must come from the paper and may not be estimated from general knowledge or invented.
+3. **The correct answer must be a concrete quantity independently verifiable by calculation.** Summarize the question in one sentence; it must end with “what is the value?” rather than “which one?” or “why?” Choosing the correct option must mean calculating correctly or using the correct formula, not merely selecting a different qualitative direction.
+
+**Principle 4: The correct answer must be counterintuitive, all distractors must be technically plausible, and perform three checks after writing**
+
+**Counterintuitive answer:** Before writing, ask: “Which value would general knowledge suggest?” Make that value a distractor. The correct answer must be superficially counterintuitive and must be the value calculated under the paper's specific constraints. If general knowledge directly points to the correct answer, the question is invalid and must be reconstructed.
+
+**Distractor quality:** Every distractor must correspond to a real calculation error—misusing a formula, dropping a coefficient, making a unit-conversion error, or misreading a paper value—not an invented number. Use neutral wording for all options; do not disparage or evaluate any option. Error types must be diverse rather than five versions of the same mistake.
+
+**Three post-writing checks (all must pass; otherwise rewrite):**
+
+1. Hide the correct answer and inspect the four distractors one by one. Each must look like it could be correct.
+2. The five options must have consistent magnitude, with adjacent values 1.5–2× apart.
+3. Without reading the paper, can general knowledge immediately eliminate more than one option? If yes, rewrite.
+
+### 5.3 Option requirements
+
+- Every multiple-choice question (BK / RP1 / RP2 / RP3 / RP4) must have **five options (A/B/C/D/E)**, giving a 20% random-guess rate.
+- Options should have similar length and symmetric structure, with neutral wording throughout.
+- Self-check: hide the answer and inspect each option independently. Each must look potentially correct; if general knowledge can eliminate more than one without the paper, rewrite.
+
+### 5.4 Type-specific writing requirements
+
+**RP4 long reasoning:** Provide complete numerical values from multiple comparative experiments in the paper. The five options must present conclusions only, without reasons. The correct answer is the one that explains all numerical differences at once. Every step in `multi_step_reasoning` must cite concrete values from the stem; include at least four steps.
+
+**DG1 TENG layer design:** **Test only the TENG stack itself; do not cover arrays, systems, or signal processing.** Give application and environmental constraints in the stem (temperature, humidity, excitation magnitude, and target output magnitude, all numerical), then require layer-by-layer design: triboelectric-layer material and thickness, back-electrode material and thickness, substrate/flexible substrate, surface-modification process, interlayer interface (source of the air gap and bonding method), and stacking order. Each scoring point must specify a layer's material, thickness, and selection rationale. Array layout, packaging integration, and signal-processing content must not appear in DG1; those belong to DG2. Every rubric point must require a numerical estimate consistent with the constraints; purely qualitative answers receive no credit. Attach a rubric with 5–6 weighted points.
+
+**DG2 complete sensing-system design:** **Test the complete workflow from device structure to signal decision.** Use one of two data-completeness tracks, selected after assessing the paper:
+
+**Data-rich track** (the paper provides device-level values such as layer thicknesses, area, electrical outputs, and sampling rate): provide the application scenario, engineering constraints, and existing device parameters, then require a complete sensing system covering four stages: (1) device structure (core-layer geometry and connections); (2) array/packaging integration (unit layout, channel partitioning, environmental protection, and fit to the measured object); (3) signal conditioning and acquisition (amplification/filtering/rectification, sampling rate, ADC bit depth, and wired/wireless transmission); (4) signal processing and decision (feature extraction, thresholds/classification, and calibration). Divide the rubric into these four stages; each point must require a numerical estimate consistent with the constraints, such as sampling rate ≥ 2× the Nyquist frequency, channel count equal to the number of array units, and thresholds inferred from measured paper data.
+
+**Data-sparse track** (the paper lacks device-level numbers but describes a structural topology: component composition, groove/air-channel shape, electrode count, array layout, and relative positions): provide the application scenario, performance targets taken from paper measurements (output power, response threshold, positioning accuracy, etc.), and a textual description of the topology (**without dimensions**). Require the evaluated model to do three things: (1) **topology design**—specify every structural decision (groove location, air-channel shape, number of disk electrodes, array layout); (2) **itemized justification**—map every structural feature to a performance target; (3) **reverse validation**—explain what happens if a feature is removed or changed, demonstrating why it is necessary. Each rubric point corresponds to one structural feature. Judge whether the topology agrees with the paper and whether the causal argument is valid; numerical values are not required.
+
+**Mixed case:** Judge data-rich stages for numerical consistency and data-sparse stages for topology reasoning. **This is mandatory and must not be skipped:** “The paper does not give micrometer-scale thicknesses” is precisely why the data-sparse track exists, not a reason to skip. Attach a rubric with 6–8 points.
+
+**DG3 3D structural modeling:** First read structural figures in the PDF (cross-sections, exploded views, SEM images, and schematics) to obtain geometry. If figures lack sufficient geometric parameters, extract as much textual structural information and performance data as possible from the paper (material names, stacking order, qualitative dimensions, fabrication parameters, etc.) to complete the stem. **This is mandatory and must not be skipped:** “There is no exploded view,” “assembly details are missing,” and “parameters remain at the principle level” are not reasons to skip it. Choose between two modes based on the completeness of the paper's geometric information:
+
+**Mode 1: Fully parameterized modeling** (the paper provides precise dimensions and assembly relationships for most listed components): state all functional-layer names, materials, thicknesses, areas/dimensions, stacking order, assembly relationships, coordinate system, modeling task, and scenario use. The evaluated model directly builds from the supplied parameters. Score precise geometry; an error greater than 10% on a paper-specified component loses points.
+
+**Mode 2: Self-completing modeling** (the paper provides only partial dimensions and a principle-level structure description—for example, film thickness, cylinder diameter and array pitch, total electrode area, and working air gap, but not assembly details, exact z coordinates, or frame dimensions): this is the capability being tested. **The evaluated model must infer missing dimensions and complete a self-consistent, buildable assembly.** The stem must provide: (1) every dimension available in the paper, unchanged; (2) the component list and principle-level assembly description (which faces oppose each other, what is above what, and what contacts what); (3) working-principle constraints such as “separated-state air gap ≈3 mm” or “total electrode area 100 mm × 100 mm,” with all inferred dimensions consistent with them; and (4) the modeling task and scenario. **Do not provide values estimated by the question writer—leave missing dimensions for the evaluated model to choose.** During scoring, check that inferred values satisfy the paper's constraints (air gap, reasonable total height, no interference). Emphasize component completeness, exact geometry for paper-specified components, reasonable magnitude of model-selected values, and global consistency (no interpenetrating layers, valid assembly relationships, and no conflict with the working principle).
+
+**Mode selection:** If the paper gives at least 70% of component dimensions, use Mode 1. If it gives core dimensions (a computable reference in any direction) but omits assembly details, use Mode 2. If neither applies (the paper has no numerical values at all), use qualitative descriptions plus conventional process parameters clearly labeled as “estimated values.” The only permitted skip is a paper that describes no physical device at all (pure theory or pure simulation); record the reason explicitly in the log.
 
 ---
 
-### 5.2 出题准则
+### 5.6 Question examples
 
-**准则 1：题目必须自包含，禁止论文专有名词**
+> **Important:** These examples are references, not templates. Questions must be based entirely on the specific content, values, and scenario of the paper at hand; do not copy the structure or numbers from an example. The examples demonstrate what a passing question looks like and do not limit the possible directions.
 
-被测模型作答时只能依赖自身知识 + 题干文字，看不到论文、看不到 source_excerpt、也看不到同论文的其他题。因此：
+#### BK1 example
 
-- 严禁在题干（question / options / rubric / required_parts）里使用论文自造的专有名词——包括论文自创缩写、自定义代号、论文内部命名。这类词模型从未见过，题目等于失效。
-- 每道题干必须独立交代清楚该题所需的全部场景信息，不允许用「上述场景」「如前所述」「该单元」等指代词省略。即使同一论文出了 10 道 RP 题，每道题干都要独立重新交代场景。
-- 论文的价值是提供场景与数值素材，不是提供术语。要把论文内容「翻译」成模型凭自身知识能理解的通用表述：用「改性蚕丝蛋白摩擦层」而不是论文缩写，用「摩擦电信号」而不是论文内部代号。
-- 题干只允许使用领域通识术语（接触起电、静电感应、接触-分离模式、PTFE/PDMS/尼龙/丝素蛋白、压电效应、迎角/失速/边界层分离、风速等）和题干自己已经交代清楚的场景描述。
-- L2/L3 题若必须绑定场景，每道题都要先用通用语言把该题需要的场景与被测量完整介绍清楚，再提问。
+> **Why it is good:** All five options are in the nC range, and general knowledge cannot eliminate any of them. The correct answer requires calculating `Q = ε₀·A·Voc/d` (`A = 59.7×22.0 mm²`, `d = 18 μm`, `Voc = 8 V`) to obtain 5.16 nC. Adjacent options differ by about 1.6×, so only the correct calculation reaches the correct option.
 
----
+**Background:**
 
-**准则 2：题干信息中性，不泄露推理路径**
+In a wing-surface triboelectric sensing unit, a modified silk-protein triboelectric layer (CSFE) fully covers the top surface of a PCB (planar dimensions 59.7 mm × 22.0 mm). The CSFE thickness is 18 μm and it is treated as a uniform dielectric layer (`ε_r = 1`). A 304 stainless-steel foil periodically contacts the CSFE under airflow. At full contact, the measured open-circuit voltage is `Voc = 8 V`; the vacuum permittivity is `ε₀ = 8.85×10⁻¹² F/m`.
 
-题干只呈现场景参数和观测现象，不给通识知识、不给公式、不给机制解释——所有推理由被测模型独立完成。
+**Question:**
 
-- 约束只给数值边界，禁止附带材料特性或机制描述，材料特性描述等于直接给出答案方向
-- 禁止任何暗示性措辞（如「为了提高灵敏度……」「由于边界层分离……」），题干只说「发生了什么」，不说「为什么」
-- RP4 选项只呈现结论数值或结论判断，不附带解释理由
-- DG 题不给参考方案、不给对比数据、不给设计方向提示；rubric 扣分项针对常见错误推理方向，不是遗漏加分点
-
----
-
-**准则 3：L1/L2 所有选择题，答案必须落点在具体数字**
-
-这是核心约束，不符合此准则的题目一律重出。
-
-**① 五个选项全部是具体数值，不是文字描述。** 选项不允许出现模式名称、机制解释段落、设计方案描述。五个选项必须在同一量级内，相邻差约 1.5–2×。禁止使用区间（如「2–6 V」），每个选项必须是一个精确数字。
-
-**② 所有数值必须来自论文。** 题干参数、选项数字、正确答案，全部追溯到论文的实测值或论文给出的几何/材料参数。标准物理常数（ε₀、弹性模量等）可以直接引用，但器件级数值（电压、质量、尺寸、准确率等）必须出自论文原文，不得凭通识估算或凭空捏造。
-
-**③ 正确答案是一个可被独立计算验证的具体量化值。** 判断方式：把这道题用一句话概括，这句话必须能以「是多少」结尾，而不是「是哪个」或「是为什么」。选对正确答案意味着算对了，选错意味着算错了或用错了公式，而不是「判断方向不同」。
-
----
-
-**准则 4：正确答案必须反通识，干扰项全部技术合理，出题后三步自检**
-
-**反通识：** 出题前必须先问：「通识判断会指向哪个数值？」把通识直接指向的那个选项做成干扰项，正确答案必须是表面反直觉的。正确答案是「在该论文具体约束下算出的值」，不是「看起来量级合理的值」。如果通识判断直接指向正确答案，题目无效，必须重构。
-
-**干扰项质量：** 每个干扰项必须对应一个真实的计算错误路径——误用公式、漏掉系数、单位换算错误、误读论文数值——而不是胡编数字。所有选项语气全部中性，禁止出现贬义词或对某选项的评价性描述。干扰项的错误类型必须多样，不得五个选项全部对应同一种错误。
-
-**出题后三步自检（必须全部通过，否则重出）：**
-① 遮住正确答案，4 个干扰项逐个看，每个都像「可能算对的」才合格
-② 5 个选项数值量级一致，相邻差在 1.5–2× 范围内
-③ 不读论文只靠通识，能否直接排除超过 1 个选项——若能，重出
-
----
-
-### 5.3 选项规范
-
-- 所有选择题（BK / RP1 / RP2 / RP3 / RP4）一律 **5 个选项（A/B/C/D/E）**，随机猜对率 20%
-- 5 个选项长度相近、结构对称，语气全部中性
-- 自检：遮住答案，5 个选项单独看每个都像「可能对的」；不读论文只靠通识能否排除超过 1 个——若能，重出
-
----
-
-### 5.4 各题型出题要点
-
-**RP4 长推理**：给出论文中多组对比实验的完整数值，5 个选项只呈现结论，不解释理由。正确答案是能同时解释全部数值差异的那个。multi_step_reasoning 每步必须引用题干中的具体数值，至少 4 步。
-
-**DG1 TENG 层级设计**：**只考 TENG 叠层本体，不涉及阵列、系统、信号处理。** 题干给出应用场景与工作环境约束（温度/湿度/激励量级/目标输出量级，均含数值），要求逐层设计：摩擦层材料与厚度、背电极材料与厚度、基底/柔性基底、表面改性工艺、层间界面（气隙来源、贴合方式）、叠层顺序。每个得分点必须是「某一层」的材料+厚度+选择理由，涉及阵列排布、封装集成、信号处理的内容一律不出现在 DG1（那是 DG2 的范畴）。rubric 每个得分点要求数值估算与约束自洽，纯定性描述不得分。附 rubric（5–6 个得分点，每点含权重）。
-
-**DG2 传感系统完整设计**：**考一整套流程，从器件结构到信号判定。** 同一题型按论文数据完整度分两档出题，出题前先评估该用哪档：
-
-**数据充分档**（论文提供器件级数值：各层厚度/面积/电气输出/采样率等）——题干给出应用场景、工程约束和已有器件参数，要求设计完整传感系统，须涵盖四个环节：① 器件结构（核心层的几何与连接）② 阵列/封装集成（单元排布、通道划分、封装防护、与被测对象的适配）③ 信号调理与采集（放大/滤波/整流方案、采样率、ADC 位宽、有线/无线传输）④ 信号处理与判定（特征提取算法、阈值/分类策略、标定方法）。rubric 按四个环节分块给分，每个得分点要求数值估算与约束自洽（如采样率 ≥ 奈奎斯特 2×、通道数 = 阵列单元数、判定阈值由论文实测数据反推）。
-
-**数据不足档**（论文缺器件级数值，但给出结构拓扑描述：部件构成、凹槽/进气道形状、电极片数、阵列排布、相对位置关系）——题干给出应用场景 + 性能目标（取论文实测：输出功率/响应阈值/定位精度等）+ 结构拓扑的文字描述（**不含尺寸**），要求被测模型完成三件事：① **拓扑设计**——给出每个结构决策（凹槽开在哪个位置、进气道什么形状、圆盘多少片电极、阵列怎么排布）；② **逐项论证**——每个结构特征如何服务性能目标（结构特征 ↔ 功能需求一一映射）；③ **反向验证**——去掉或改变某个结构特征会发生什么，验证该特征的必要性。rubric 每个结构特征对应一个得分点，判分依据是「拓扑是否与论文一致 + 因果论证是否成立」，不要求数值。
-
-**混合情形**：论文有数值的环节按充分档判数值自洽，没数值的环节按不足档判拓扑论证。**必出，禁止跳过**——「论文没给 μm 级厚度」正是数据不足档存在的意义，不是跳过理由。附 rubric（6–8 个得分点）。
-
-**DG3 三维结构建模**：优先读取论文 PDF 中的结构图（截面图/爆炸图/SEM 图/示意图）获取几何参数；若图表中几何参数不足，则从论文正文中尽可能完整地提取文字描述的结构信息与性能数据（材料名称、层叠顺序、定性尺寸描述、制备工艺参数等），用于补全题干。**必出，禁止跳过**——「没有爆炸图」「缺装配细节」「参数停留在原理层面」都不是跳过理由。**DG3 分两种出题模式，按论文几何信息的完整度选择：**
-
-**模式一：完整参数建模**（论文提供了部件清单中大部分的精确尺寸与装配关系）——题干完整给出各功能层名称、材料、厚度、面积/尺寸、层叠顺序、装配关系、坐标系、建模任务说明、场景用途说明，被测模型按给定参数直接建模。评分按精确几何判分（论文值部件误差 >10% 扣分）。
-
-**模式二：自主补全建模**（论文只给出部分尺寸与原理级结构描述——如只给了薄膜厚度、圆柱直径与阵列间距、总体电极面积、工作气隙，但没给装配细节、各层精确 z 坐标、框架尺寸）——这正是要考的能力：**被测模型须根据已有参数自行推断缺失尺寸，补全成一个自洽的可建模装配体**。题干给出：① 论文已有的全部尺寸参数（原样列出）② 部件清单与原理级装配描述（哪个面相对、谁在谁上、谁与谁接触）③ 工作原理约束（如「分离态气隙 ≈3 mm」「电极总面积 100 mm × 100 mm」——推断出的其他尺寸必须与这些约束自洽）④ 建模任务与场景说明。**不给出题者自己估计的缺失值——缺失尺寸留给被测模型自己定**，判分时检查其补全值是否满足论文给定约束（如气隙值、总高合理性、不干涉）。评分重心：部件齐全度（论文提到的部件是否全部建模）、论文值部件的精确几何、被测模型自定尺寸的量级合理性与全局自洽性（层间不穿插、装配关系成立、与工作原理约束无矛盾）。
-
-**模式选择规则**：论文给全 ≥70% 部件尺寸 → 模式一；给出核心尺寸（任一方向的可推算基准）但缺装配细节 → 模式二。两模式都不适用（论文完全无任何数值）时，用论文定性描述 + 标注「估计值」的常规工艺参数出题。唯一允许跳过的情形：论文完全没有描述任何实体器件（纯理论/纯模拟论文），此时须在日志中明确记录跳过原因。
-
----
-
-### 5.6 题型例子
-
-> **重要：例子只是参考，不是模板。你的出题必须完全基于手头这篇论文的具体内容、数值和场景，不得套用例子的结构或数值。例子的作用是展示"什么叫达标的题"，而不是限制出题方向。**
-
----
-
-#### BK1 例子
-
-> **为什么好：** 五个选项都在 nC 量级，通识无法排除任何一个；正确答案需要完整计算 Q = ε₀·A·Voc/d（A = 59.7×22.0 mm²，d = 18 μm，Voc = 8 V）得出 5.16 nC，选项之间差距约 1.6×，只有算对才能落到正确选项。
-
-**背景：**
-某翼面摩擦电传感单元中，改性蚕丝蛋白摩擦层（CSFE）完全覆盖 PCB 上表面（平面尺寸 59.7 mm × 22.0 mm），CSFE 厚度 18 μm，视为均匀介质层（ε_r = 1）。304 不锈钢薄片与 CSFE 在气流驱动下周期性贴合。在两者完全接触状态下，测得开路电压 Voc = 8 V，真空介电常数 ε₀ = 8.85×10⁻¹² F/m。
-
-**问题：**
-在完全接触状态下，CSFE-钢片界面的等效转移电荷量最接近哪个值？
+At full contact, what is the equivalent transferred charge at the CSFE–steel interface closest to?
 
 A. 2.0 nC
 B. 3.3 nC
@@ -288,47 +285,43 @@ C. 5.2 nC
 D. 8.4 nC
 E. 13.5 nC
 
-**答案：C**
+**Answer:** C
 
-**计算：** C_eq = ε₀·A/d = 8.85×10⁻¹² × (59.7×22.0×10⁻⁶) / 18×10⁻⁶ ≈ 645 pF；Q = C_eq·Voc = 645×10⁻¹² × 8 ≈ 5.16 nC，最接近 C（5.2 nC）。B 对应 Voc 低估约 50%；D 对应 Voc 高估约 60%；A/E 偏差均超过 2×。
+**Calculation:** `C_eq = ε₀·A/d = 8.85×10⁻¹² × (59.7×22.0×10⁻⁶) / 18×10⁻⁶ ≈ 645 pF`; `Q = C_eq·Voc = 645×10⁻¹² × 8 ≈ 5.16 nC`, closest to C (5.2 nC). B corresponds to underestimating `Voc` by about 50%; D corresponds to overestimating it by about 60%; A and E are both off by more than 2×.
 
----
+#### BK2 example
 
-#### BK2 例子
+> **Why it is good:** A flexible steel foil (0.1 mm thick, 22 mm wide, 95 mm free cantilever length) experiences approximately 960 Pa normal dynamic pressure at 40 m/s. The five options give different foil thicknesses. The correct answer requires using bending stiffness `EI ∝ h³` to determine which thickness can produce deflection ≥3 mm (the initial air gap) under 15 Pa dynamic pressure. General knowledge cannot distinguish the driveability of the 0.08/0.10/0.12 mm options.
 
-> **为什么好：** 弹性钢片（厚 0.1 mm，宽 22 mm，自由悬臂长 95 mm）在 40 m/s 风速下的法向动压约 960 Pa；五个选项都给出不同厚度的钢片，正确答案需要用弯曲刚度 EI ∝ h³ 计算在 15 Pa 动压下哪个厚度能使挠度 ≥ 3 mm（初始气隙），通识无法区分 0.08/0.10/0.12 mm 三档厚度的可驱动性差异。
+**Background:**
 
-**背景：**
-为固定翼无人机（翼弦 20 cm）翼面设计摩擦电失速传感单元，弹性钢片悬臂梁：固定端宽 22 mm，自由悬臂长 95 mm，初始气隙 3.0 mm（泡沫垫片支撑），钢材弹性模量 193 GPa。传感单元须在风速 8 m/s（法向动压约 38 Pa）时可靠起振（最大挠度 ≥ 3 mm），在风速 40 m/s（法向动压约 960 Pa）时不发生塑性变形（σ_max < 515 MPa）。弯曲公式：δ_max = FL⁴/(8EI)，I = bh³/12，σ_max = 6FL²/(bh²)。
+Design a triboelectric stall-sensing unit on the wing surface of a fixed-wing UAV (20 cm chord). The elastic steel cantilever has a 22 mm fixed-end width, a 95 mm free length, and an initial 3.0 mm air gap supported by a foam spacer. The steel's elastic modulus is 193 GPa. The unit must start reliably at 8 m/s (normal dynamic pressure ≈38 Pa, maximum deflection ≥3 mm) and must not plastically deform at 40 m/s (normal dynamic pressure ≈960 Pa, `σ_max < 515 MPa`). Use `δ_max = FL⁴/(8EI)`, `I = bh³/12`, and `σ_max = 6FL²/(bh²)`.
 
-**问题：**
-五种钢片厚度方案中，唯一同时满足"8 m/s 可驱动"和"40 m/s 不塑性失效"两项约束的是哪个？
+**Question:**
 
-A. h = 0.06 mm（δ_max@8m/s ≈ 23 mm ≥ 3 mm；σ_max@40m/s ≈ 1280 MPa > 515 MPa）
+Which of the five steel-foil thicknesses is the only one satisfying both “drivable at 8 m/s” and “no plastic failure at 40 m/s”?
 
-B. h = 0.08 mm（δ_max@8m/s ≈ 7.3 mm ≥ 3 mm；σ_max@40m/s ≈ 720 MPa > 515 MPa）
+A. `h = 0.06 mm` (`δ_max@8m/s ≈ 23 mm ≥ 3 mm`; `σ_max@40m/s ≈ 1280 MPa > 515 MPa`)
+B. `h = 0.08 mm` (`δ_max@8m/s ≈ 7.3 mm ≥ 3 mm`; `σ_max@40m/s ≈ 720 MPa > 515 MPa`)
+C. `h = 0.10 mm` (`δ_max@8m/s ≈ 3.0 mm ≥ 3 mm`; `σ_max@40m/s ≈ 460 MPa < 515 MPa`)
+D. `h = 0.12 mm` (`δ_max@8m/s ≈ 1.7 mm < 3 mm`; `σ_max@40m/s ≈ 320 MPa < 515 MPa`)
+E. `h = 0.15 mm` (`δ_max@8m/s ≈ 0.7 mm < 3 mm`; `σ_max@40m/s ≈ 205 MPa < 515 MPa`)
 
-C. h = 0.10 mm（δ_max@8m/s ≈ 3.0 mm ≥ 3 mm；σ_max@40m/s ≈ 460 MPa < 515 MPa）
+**Answer:** C
 
-D. h = 0.12 mm（δ_max@8m/s ≈ 1.7 mm < 3 mm；σ_max@40m/s ≈ 320 MPa < 515 MPa）
+**Calculation:** For `h=0.10 mm`, `I = 22×(0.1)³/12×10⁻¹² = 1.83×10⁻¹⁵ m⁴`; `F@8m/s = 38×0.095×0.022 = 0.079 N`; `δ = 0.079×0.095⁴/(8×193×10⁹×1.83×10⁻¹⁵) ≈ 3.0 mm`; `F@40m/s = 960×0.095×0.022 = 2.00 N`; `σ_max = 6×2.00×0.095²/(0.022×(0.1×10⁻³)²) ≈ 460 MPa < 515 MPa`. Both constraints are satisfied; this is the only feasible design.
 
-E. h = 0.15 mm（δ_max@8m/s ≈ 0.7 mm < 3 mm；σ_max@40m/s ≈ 205 MPa < 515 MPa）
+#### BK3 example
 
-**答案：C**
+> **Why it is good:** All five options are within the μC/m² range. General knowledge may suggest that silk protein is relatively negative, but cannot provide the exact value. The correct answer requires using `σ = ε₀·Voc/d` (`d = 18 μm`, `Voc = 8 V`) with the CSFE thickness and open-circuit voltage from the paper to calculate 3.93 μC/m². Adjacent options differ by about 1.6×, so one calculation error reaches a neighboring distractor.
 
-**计算：** h=0.10 mm 时，I = 22×(0.1)³/12×10⁻¹² = 1.83×10⁻¹⁵ m⁴；F@8m/s = 38×0.095×0.022 = 0.079 N；δ = 0.079×0.095⁴/(8×193×10⁹×1.83×10⁻¹⁵) ≈ 3.0 mm；F@40m/s = 960×0.095×0.022 = 2.00 N；σ_max = 6×2.00×0.095²/(0.022×(0.1×10⁻³)²) ≈ 460 MPa < 515 MPa。两项约束均满足，唯一可行方案。
+**Background:**
 
----
+A research group modifies natural silk fibroin (SF) with 15 wt% polyurethane (WPU) to create a modified composite film (CSFE). The film is 18 μm thick, and its dielectric constant is conservatively taken as `ε_r = 1`. CSFE is paired with a 304 stainless-steel foil; at full contact, the open-circuit voltage is `Voc = 8 V`. The vacuum permittivity is `ε₀ = 8.85×10⁻¹² F/m`.
 
-#### BK3 例子
+**Question:**
 
-> **为什么好：** 五个选项都在 μC/m² 量级内，通识知道"蚕丝蛋白偏负"但无法给出具体数值；正确答案需要用 σ = ε₀·Voc/d（d = 18 μm，Voc = 8 V）从论文给出的 CSFE 厚度和开路电压计算出 3.93 μC/m²，选项间隔约 1.6×，算错一步就落到相邻错误选项。
-
-**背景：**
-某研究组对天然蚕丝蛋白（SF）进行 15 wt% 聚氨酯（WPU）掺杂改性，制得改性复合薄膜（CSFE），厚度 18 μm，介电常数取 ε_r = 1（保守估算）。CSFE 与 304 不锈钢薄片配对，在两极完全接触状态下测得开路电压 Voc = 8 V。真空介电常数 ε₀ = 8.85×10⁻¹² F/m。
-
-**问题：**
-该 CSFE 薄膜与 304 不锈钢界面的等效表面电荷密度最接近哪个值？
+What is the equivalent surface charge density at the CSFE–304 stainless-steel interface closest to?
 
 A. 1.5 μC/m²
 B. 2.5 μC/m²
@@ -336,21 +329,21 @@ C. 3.9 μC/m²
 D. 6.3 μC/m²
 E. 10.1 μC/m²
 
-**答案：C**
+**Answer:** C
 
-**计算：** σ = ε₀·Voc/d = 8.85×10⁻¹² × 8 / 18×10⁻⁶ = 3.93 μC/m²，最接近 C（3.9 μC/m²）。B 对应 Voc 低估约 55%（≈ 5 V 水平）；D 对应 Voc 高估约 60%（≈ 13 V 水平）；A/E 偏差均超过 2×。
+**Calculation:** `σ = ε₀·Voc/d = 8.85×10⁻¹² × 8 / 18×10⁻⁶ = 3.93 μC/m²`, closest to C (3.9 μC/m²). B corresponds to underestimating `Voc` by about 55% (approximately a 5 V level); D corresponds to overestimating it by about 60% (approximately a 13 V level); A and E are both off by more than 2×.
 
----
+#### BK4 example
 
-#### BK4 例子
+> **Why it is good:** All five options are in the nW range. General knowledge indicates that TENG power is low but cannot distinguish whether 8/40/160 nW is correct. The correct answer requires calculating `R_eq = Voc/Isc = 400 MΩ` and then `Pmax = Voc²/(4R_eq) = 40 nW`. A common error is to use `Voc×Isc = 160 nW` and omit the 1/4 matched-load transfer factor, leading to E.
 
-> **为什么好：** 五个选项都在 nW 量级，通识知道"TENG 功率低"但无法区分 8/40/160 nW 哪个才是正确量级；正确答案需要完整计算 R_eq = Voc/Isc = 400 MΩ，再代入 Pmax = Voc²/(4R_eq) = 40 nW；常见错误是用 Voc×Isc = 160 nW（漏掉匹配负载下功率传输系数 1/4），会选 E。
+**Background:**
 
-**背景：**
-某翼面摩擦电传感单元在风速 20 m/s 下测得：开路电压 Voc = 8 V，短路电流 Isc = 20 nA。匹配负载下的最大输出功率 Pmax = Voc²/(4R_eq)，其中 R_eq = Voc/Isc。
+A wing-surface triboelectric sensing unit measures `Voc = 8 V` and `Isc = 20 nA` at a wind speed of 20 m/s. Under a matched load, the maximum output power is `Pmax = Voc²/(4R_eq)`, where `R_eq = Voc/Isc`.
 
-**问题：**
-该传感单元在匹配负载条件下的最大输出功率 Pmax 最接近哪个值？
+**Question:**
+
+What is the maximum output power `Pmax` under a matched load closest to?
 
 A. 4 nW
 B. 16 nW
@@ -358,21 +351,21 @@ C. 40 nW
 D. 100 nW
 E. 160 nW
 
-**答案：C**
+**Answer:** C
 
-**计算：** R_eq = 8 V / 20×10⁻⁹ A = 400 MΩ；Pmax = (8)²/(4×400×10⁶) = 64/1.6×10⁹ = 40×10⁻⁹ W = 40 nW。E（160 nW）对应直接用 Voc×Isc 未乘 1/4；D（100 nW）对应 R_eq 估算偏低；B/A 对应 R_eq 或 Voc 估算偏高。
+**Calculation:** `R_eq = 8 V / 20×10⁻⁹ A = 400 MΩ`; `Pmax = (8)²/(4×400×10⁶) = 64/1.6×10⁹ = 40×10⁻⁹ W = 40 nW`. E corresponds to directly using `Voc×Isc` without the 1/4 factor; D corresponds to underestimating `R_eq`; B and A correspond to overestimating `R_eq` or `Voc`.
 
----
+#### RP1 example
 
-#### RP1 例子
+> **Why it is good:** All five options are in the V range and adjacent values differ by about 1.6×. The stem gives a wind speed of 40 m/s and a 1000-point STD window. The correct answer requires knowing the paper's Fig. 3b value of approximately 0.25 V for the T-signal STD during normal, unstalled flight. General knowledge may mistake STD for the raw signal amplitude (about 8 V) and select D/E.
 
-> **为什么好：** 五个选项都在 V 量级，相邻差约 1.6×；题干给出风速 40 m/s 和 STD 窗口 1000 点，正确答案需要知道论文 Fig. 3b 中正常飞行（未失速）状态下 T-signal STD 值约 0.25 V，通识会猜测 STD 与原始幅度同量级（~8V），导致选 D/E。
+**Background:**
 
-**背景：**
-某研究组在 NACA0012 翼型（弦长 20 cm）翼面部署接触-分离式摩擦电传感系统，弹性 304 不锈钢薄片（厚 0.1 mm）在气流驱动下拍击改性蚕丝蛋白摩擦层，输出摩擦电信号（T-signal）。风洞测试风速 40 m/s，未失速状态（AoA = 0°）。采用标准差（STD）算法处理 T-signal：每 1000 个实时数据点计算一次 STD，输出一个 STD 数据点。
+A research group deploys a contact-separation triboelectric sensing system on the surface of an NACA0012 airfoil (20 cm chord). A flexible 304 stainless-steel foil (0.1 mm thick) strikes a modified silk-protein triboelectric layer under airflow and outputs a triboelectric signal (T-signal). In a wind-tunnel test at 40 m/s, the system is in a stable, unstalled state (`AoA = 0°`). The T-signal is processed using a standard-deviation (STD) algorithm: one STD value is calculated for every 1000 real-time data points.
 
-**问题：**
-在风速 40 m/s、AoA = 0°（未失速）稳定状态下，T-signal 的 STD 处理结果最接近哪个值？
+**Question:**
+
+At 40 m/s and `AoA = 0°` in a stable, unstalled state, what value is the T-signal STD result closest to?
 
 A. 0.05 V
 B. 0.10 V
@@ -380,19 +373,19 @@ C. 0.25 V
 D. 1.5 V
 E. 5.0 V
 
-**答案：C**
+**Answer:** C
 
----
+#### RP2 example
 
-#### RP2 例子
+> **Why it is good:** All five options are hole-area fractions, with adjacent values differing by about 1.4×. The correct answer requires using `b_eff = b×(1−ρ_hole)` and `EI ∝ b_eff·h³` for the triangularly arranged diamond holes in the paper (covering the first 50 mm and giving an equivalent solid-width fraction of 65%). General knowledge may assume “more holes means more sensitivity” and choose the largest hole fraction.
 
-> **为什么好：** 五个选项都是镂空面积占比，相邻差约 1.4×；正确答案需要用 b_eff = b×(1−ρ_hole) 和 EI ∝ b_eff·h³ 计算论文所用三角形排列菱形孔（覆盖前半段 50 mm，等效实体宽度占比 65%）对应的镂空率，通识会猜测"孔越多越灵敏"选最高镂空率。
+**Background:**
 
-**背景：**
-某研究组在 304 不锈钢薄片（总长 100 mm，宽 22 mm，厚 0.1 mm）前半段（x = 0–50 mm）引入三角形排列的菱形镂空（每孔对角线 3 mm × 3 mm），使等效弯曲宽度从 22 mm 降至 b_eff。测试结果显示：引入镂空后，8 m/s 风速下 T-signal STD 从 0.05 V 提升至 0.25 V，而 40 m/s 风速下最大应力仍低于拉伸极限（515 MPa）。
+A research group introduces triangularly arranged diamond-shaped holes (each with 3 mm × 3 mm diagonals) in the first half (`x = 0–50 mm`) of a 304 stainless-steel foil (100 mm long, 22 mm wide, 0.1 mm thick), reducing the effective bending width from 22 mm to `b_eff`. The measured T-signal STD increases from 0.05 V to 0.25 V at 8 m/s after perforation, while the maximum stress at 40 m/s remains below the tensile limit (515 MPa).
 
-**问题：**
-该镂空方案对应的面积镂空率（镂空面积/总面积）最接近哪个值？
+**Question:**
+
+What is the area hole fraction (hole area / total area) of this perforation design closest to?
 
 A. 15%
 B. 22%
@@ -400,21 +393,21 @@ C. 35%
 D. 50%
 E. 65%
 
-**答案：C**
+**Answer:** C
 
-**计算：** 论文中等效实体宽度占比 b_eff/b = 0.65，即镂空率 = 1 − 0.65 = 35%，对应选项 C。A/B 镂空率不足，刚度降低有限，8 m/s 下挠度仍不足；D/E 镂空率过高，40 m/s 下应力超出拉伸极限。
+**Calculation:** The paper gives an equivalent solid-width fraction `b_eff/b = 0.65`, so the hole fraction is `1 − 0.65 = 35%`, corresponding to C. A/B provide insufficient perforation and limited stiffness reduction, leaving insufficient deflection at 8 m/s; D/E provide excessive perforation and cause stress to exceed the tensile limit at 40 m/s.
 
----
+#### RP3 example
 
-#### RP3 例子
+> **Why it is good:** All five options are in the V range and adjacent values differ by about 1.6×. The stem states that the stalled T-signal falls below 0.3 V, which may anchor a model to A/B by underestimating the P-signal. The correct answer C requires knowing the typical output level of the PVDF excited by reversed flow in full stall (about 2 V measured in Fig. 3d), which general knowledge cannot distinguish from B.
 
-> **为什么好：** 五个选项都在 V 量级，相邻选项差约 1.6×；题干已告知失速时 T-signal 降至 <0.3 V，容易锚定至 A/B（低估 P-signal）；正确答案 C 需要知道 PVDF 在充分失速状态下被翻转气流激励的典型输出量级（论文 Fig. 3d 实测约 2 V），纯通识无法区分 B/C。
+**Background:**
 
-**背景：**
-某研究组在 NACA0012 翼型（弦长 20 cm）翼面部署摩擦电失速传感系统，在风速 40 m/s 的风洞中测试。AoA 超过 16° 后，T-signal 幅度降至噪声底线（< 0.3 V），同时 P-signal 出现并持续增大。PVDF 压电薄膜面积 20.3 mm × 10.0 mm，安装于钢片后段（弦向后缘区）。
+A research group deploys a triboelectric stall-sensing system on an NACA0012 airfoil (20 cm chord) and tests it in a wind tunnel at 40 m/s. Above 16° AoA, the T-signal amplitude falls to the noise floor (<0.3 V), while the P-signal appears and continues to increase. The PVDF piezoelectric film has an area of 20.3 mm × 10.0 mm and is installed on the rear chordwise section of the steel foil.
 
-**问题：**
-该传感系统在风速 40 m/s、AoA = 18°（充分失速状态）下，P-signal 开路电压峰值最接近哪个值？
+**Question:**
+
+At 40 m/s and `AoA = 18°` (fully stalled), what is the P-signal open-circuit voltage peak closest to?
 
 A. 0.3 V
 B. 0.8 V
@@ -422,26 +415,26 @@ C. 2.0 V
 D. 5.0 V
 E. 12.0 V
 
-**答案：C**
+**Answer:** C
 
----
+#### RP4 example
 
-#### RP4 例子
+> **Why it is good:** The four accuracies form a 2×2 factorial design. The correct answer requires identifying fixed P-signal processing as the control variable, reading two differences (18 pp and 12 pp), and averaging them to obtain 15 pp. General knowledge may directly use M1−M2 = 26 pp without controlling for the P-signal difference, or compare only M1−M4 = 18 pp; these errors map to D and E.
 
-> **为什么好：** 四组准确率构成 2×2 因子设计，正确答案需要先识别"固定 P-signal 算法"控制变量、再分别读出两个差值（18 pp 和 12 pp）、最后取均值 15 pp；通识会直接用 M1−M2 = 26 pp（未控制 P-signal 差异），或仅读单组比较 M1−M4 = 18 pp，两种错法分别对应选项 D 和 E。
+**Background:**
 
-**背景：**
-某研究组在 NACA0012 翼型（弦长 20 cm）翼面部署摩擦电-压电耦合失速传感系统，在风洞（湍流度 < 0.2%，风速 40 m/s）中完成标定后，在高湍流度飞行环境（湍流度 > 1%）中进行实际测试。研究者对比了四种信号处理方案在 100 次独立失速测试中的预警准确率：
+A research group deploys a coupled triboelectric–piezoelectric stall-sensing system on an NACA0012 airfoil (20 cm chord). After calibration in a wind tunnel with turbulence intensity <0.2% and wind speed 40 m/s, the system is tested in flight at turbulence intensity >1%. The researchers compare four signal-processing schemes over 100 independent stall tests:
 
-| 方案 | T-signal 处理 | P-signal 处理 | 准确率 |
+| Scheme | T-signal processing | P-signal processing | Accuracy |
 |------|--------------|--------------|--------|
-| M1   | STD          | Prominence   | 97%    |
-| M2   | Prominence   | STD          | 71%    |
-| M3   | STD          | STD          | 83%    |
-| M4   | Prominence   | Prominence   | 79%    |
+| M1 | STD | Prominence | 97% |
+| M2 | Prominence | STD | 71% |
+| M3 | STD | STD | 83% |
+| M4 | Prominence | Prominence | 79% |
 
-**问题：**
-利用上表四组数据，在控制 P-signal 处理算法不变的前提下，T-signal 算法从 Prominence 切换至 STD 所带来的准确率提升（百分点）的最佳估计值最接近哪个值？
+**Question:**
+
+Using the four values above, while holding the P-signal algorithm constant, what is the best estimate of the accuracy improvement (percentage points) from switching the T-signal algorithm from Prominence to STD?
 
 A. 5 pp
 B. 10 pp
@@ -449,206 +442,216 @@ C. 15 pp
 D. 21 pp
 E. 26 pp
 
-**答案：C**
+**Answer:** C
 
-**推理链条：**
-1. 要估计"T-signal 算法（STD vs Prominence）"对准确率的独立贡献，需固定 P-signal 算法，分别读出两个条件下的差值
-2. 固定 P=Prominence：M1（T=STD）= 97%，M4（T=Prom）= 79%，差值 = **18 pp**
-3. 固定 P=STD：M3（T=STD）= 83%，M2（T=Prom）= 71%，差值 = **12 pp**
-4. 两个条件下的差值不同（18 ≠ 12），说明存在 T×P 交互效应；控制后的最佳估计 = (18 + 12) / 2 = **15 pp**
-5. E（26 pp）对应直接用 M1−M2 未固定 P-signal；D（21 pp）对应对 18 pp 错误上调；B（10 pp）对应只读取了 P=STD 条件下的 12 pp 后下调
+**Reasoning chain:**
 
----
+1. To estimate the independent contribution of the T-signal algorithm (STD vs. Prominence), hold the P-signal algorithm fixed and read the difference under both conditions.
+2. Hold `P=Prominence`: M1 (`T=STD`) = 97%, M4 (`T=Prominence`) = 79%, difference = **18 pp**.
+3. Hold `P=STD`: M3 (`T=STD`) = 83%, M2 (`T=Prominence`) = 71%, difference = **12 pp**.
+4. The differences are not equal (18 ≠ 12), indicating a T×P interaction; the controlled best estimate is `(18 + 12) / 2 = **15 pp**`.
+5. E (26 pp) directly uses M1−M2 without holding P-signal constant; D (21 pp) incorrectly increases 18 pp; B reads only the 12 pp under `P=STD` and decreases it.
 
-#### DG1 例子
+#### DG1 example
 
-> **为什么好：** 本题只考叠层本体——每一层（基底/摩擦层/背电极/表面处理/气隙界面）的材料与厚度选择，不涉及阵列与信号处理；-40°C 低温 + 高湿约束使通识首选 PTFE（负极性最强）反而失效（静电吸附抑制拍击），正确答案须选正极性有机层并论证掺杂比例；每层厚度须与总厚 ≤ 0.5 mm 约束逐层核算。
+> **Why it is good:** This question tests only the stack itself—material and thickness selection for the substrate, triboelectric layer, back electrode, surface treatment, and air-gap interface—and does not involve arrays or signal processing. The −40°C and high-humidity constraints make the obvious choice of PTFE (strongly negative polarity) fail because electrostatic adhesion suppresses impacts. The correct answer must choose a positive-polarity organic layer and justify the dopant ratio. Every layer thickness must be checked against the total-thickness limit of 0.5 mm.
 
-**背景：**
-为 -40°C 至 85°C、相对湿度最高 95% 的高空环境设计一种翼面气流驱动接触-分离式 TENG 的**叠层本体**。气流驱动的对置弹性金属片已确定（厚 0.1 mm 304 不锈钢），需设计与之配对的另一侧叠层。目标输出：完全接触状态下 Voc = 8 V。
+**Background:**
 
-**约束（仅针对叠层本体）：**
-- 叠层总厚度（从基底底面到摩擦面）≤ 0.5 mm
-- 摩擦面须为**正极性**（相对金属片），避免高湿低温下静电吸附导致拍击抑制
-- -40°C 下不得脆裂（断裂应变 > 5%）
-- 各层须给出材料名称 + 厚度数值 + 一句选择理由
+Design the **TENG stack itself** for an airflow-driven contact-separation TENG on an aircraft surface operating from −40°C to 85°C at up to 95% relative humidity. The opposing elastic metal foil is fixed (0.1 mm thick 304 stainless steel); design the mating stack. The target output is `Voc = 8 V` at full contact.
 
-**问题：**
-逐层设计该叠层，须涵盖：
+**Constraints (stack only):**
 
-1. 基底：材料与厚度（柔性基底承受 -40°C 弯折）
-2. 背电极：材料与厚度（沉积在基底上的导电层）
-3. 摩擦层：材料与厚度（须正极性、低温韧性好），若为掺杂改性材料给出掺杂比例
-4. 表面处理：微结构类型与特征尺寸（提升有效接触面积）
-5. 气隙界面：自然气隙来源与数值（无气流时摩擦面与金属片的间隙）
-6. 叠层顺序图（文字描述，从下到上）
+- Total stack thickness from the bottom of the substrate to the triboelectric surface ≤ 0.5 mm.
+- The triboelectric surface must be **positive-polarity** relative to the metal foil to avoid impact suppression by electrostatic adhesion at high humidity and low temperature.
+- No brittle fracture at −40°C (fracture strain >5%).
+- Give a material, numerical thickness, and one-sentence reason for every layer.
 
-**评分 Rubric（总分 1.0）：**
+**Question:**
 
-| 维度 | 分值 | 评分要点 |
+Design the stack layer by layer, covering:
+
+1. Substrate: material and thickness (flexible substrate that tolerates bending at −40°C).
+2. Back electrode: material and thickness (conductive layer deposited on the substrate).
+3. Triboelectric layer: material and thickness (positive polarity and good low-temperature toughness); if modified, give the dopant ratio.
+4. Surface treatment: microstructure type and feature size (to increase effective contact area).
+5. Air-gap interface: source and value of the natural gap between the triboelectric surface and metal foil at rest.
+6. Stack-order diagram (written description from bottom to top).
+
+**Scoring rubric (total 1.0):**
+
+| Dimension | Weight | Scoring points |
 |------|------|----------|
-| 基底选材 | 0.15 | 选 PI（-269~400°C 区间）或 PET 并给出 25–125 μm 厚度；选 PDMS 须说明 -40°C 接近其玻璃化转变的脆化风险；纯定性描述不得分 |
-| 背电极 | 0.15 | Cu/Ag/ITO 任一，厚度 50 nm–3 μm；须说明沉积方式（磁控溅射/蒸镀）与方阻量级（< 10 Ω/sq）；ITO 须指出脆性风险 |
-| 摩擦层选材与掺杂 | 0.25 | 选正极性材料（蚕丝蛋白/尼龙/纤维素任一）；若选蚕丝蛋白须给出 15 wt% WPU 掺杂并说明 β-sheet 增强机制与低温韧性来源；选 PTFE/FEP（负极性）直接 0 分——违反正极性约束 |
-| 表面处理 | 0.20 | 给出微结构类型（微柱阵列/砂纸模板/等离子刻蚀）+ 特征尺寸（1–50 μm 量级）+ 接触面积提升倍数估算（≥ 2×）；无尺寸数值不得分 |
-| 气隙与总厚核算 | 0.25 | 气隙来源（表面微结构高度或预弯曲）+ 数值（10–100 μm）；逐层厚度求和 ≤ 0.5 mm，须列出各层厚度算式；超厚须调整并复算 |
+| Substrate selection | 0.15 | Select PI (−269 to 400°C range) or PET and give a 25–125 μm thickness; if selecting PDMS, explain the embrittlement risk near its glass-transition temperature at −40°C; purely qualitative answers receive no credit. |
+| Back electrode | 0.15 | Select Cu/Ag/ITO with a thickness of 50 nm–3 μm; state the deposition method (magnetron sputtering or evaporation) and sheet-resistance order (<10 Ω/sq); identify ITO brittleness if used. |
+| Triboelectric material and doping | 0.25 | Select a positive-polarity material (silk protein/nylon/cellulose); if selecting silk protein, give 15 wt% WPU doping and explain the β-sheet strengthening mechanism and low-temperature toughness; PTFE/FEP (negative polarity) receives 0 because it violates the polarity constraint. |
+| Surface treatment | 0.20 | Give a microstructure type (microcolumn array/sandpaper template/plasma etching), feature size in the 1–50 μm range, and an estimated contact-area increase of at least 2×; no numerical size receives no credit. |
+| Air gap and thickness calculation | 0.25 | Give the gap source (surface feature height or pre-bending) and a numerical value (10–100 μm); sum all layer thicknesses to ≤0.5 mm and show the calculation; if too thick, adjust and recalculate. |
+
+#### DG2 example (data-rich track)
+
+> **Why it is good:** It covers the full “device connection → array integration → conditioning/acquisition → processing/decision” chain, and every missing stage loses points. A general answer tends to discuss only device structure and omit the Nyquist calculation and latency-budget decomposition. The sampling rate must satisfy ≥2×40 Hz = 80 Hz (the paper uses 1 kHz, 25× oversampling), and the latency budget must close at ≤500 ms after breaking it down by stage. At 1 kHz, a 1000-point STD window is exactly 1 s, so its temporal resolution must be reconciled with the 150 ms wireless delay; this is a non-general contribution from the paper. **This is the data-rich track.**
+
+**Background:**
+
+A research group deploys an airborne stall-warning sensing system on a fixed-wing UAV (1420 mm wingspan, 7.9 m/s cruise speed, total mass 1810 g). The existing sensing unit consists of a suspended steel foil (0.1 mm thick), a modified silk-protein triboelectric layer, and an integrated rear PVDF section. Single-unit wind-tunnel calibration gives: unstalled T-signal STD ≈0.25 V, stalled T-signal drops to the noise floor (<0.3 V), P-signal peak rises to ≈2 V, and the main foil-impact frequency is approximately 40 Hz.
+
+**Constraints:**
+
+- Total system mass ≤10 g, including sensor units and acquisition circuitry.
+- One sensing unit per wing, two units total and four signal channels (`T×2 + P×2`).
+- End-to-end wireless warning latency ≤500 ms.
+- Warning accuracy ≥95% over 100 independent stall tests.
+
+**Question:**
+
+Design the complete sensing system and give a quantitative plan for each stage:
+
+1. **Device connection:** routing and shielding from every device electrode to the acquisition board for the T/P channels.
+2. **Array integration:** installation locations of the two units on the wings (spanwise percentages) and the aerodynamic rationale.
+3. **Signal conditioning and acquisition:** amplification and range per channel, sampling rate with a Nyquist calculation, ADC channel count and bit depth, wireless transmission, and a stage-by-stage latency budget.
+4. **Signal processing and decision:** algorithm for each T/P channel, threshold values based on calibration data, and joint two-channel decision logic.
+
+**Scoring rubric (total 1.0):**
+
+| Dimension | Weight | Scoring points |
+|------|----------|----------|
+| Device connection | 0.15 | T channel: differential routing from the steel-foil back electrode and triboelectric-layer back electrode; P channel: independent routing of the upper and lower PVDF silver electrodes; independent shielding for both channels; missing any electrode route loses half of this point. |
+| Array position | 0.15 | Spanwise 60–80% (early local-stall region near the wing tip, where the P-signal is stronger); give a percentage and one reason based on spanwise load distribution; “on the wing surface” without a numerical location receives no credit. |
+| Sampling-rate calculation | 0.20 | State the Nyquist condition `f_s ≥ 2×40 = 80 Hz` and choose an actual value ≥1 kHz (25× oversampling for stable STD-window statistics); use four ADC channels and ≥12 bits (resolving the 0.3 V threshold at <1/10 of full scale); no numbers receives no credit. |
+| Latency budget | 0.20 | Decompose the stages and keep the sum ≤500 ms: acquisition buffer + STD/Prominence computation + wireless transmission (approximately 150 ms measured in the paper) + terminal decision; list numerical values and sum them. |
+| Algorithm and thresholds | 0.20 | T channel: STD with a 1000-point window and 1 s resolution, threshold 0.3 V (noise floor); P channel: Prominence isolated-peak detection with a threshold above the approximately 2 V background level; joint logic: T drop + P appearance → stall alarm; thresholds must cite the calibration data in the stem. |
+| Accuracy validation | 0.10 | Validate with 100 independent stall tests at ≥95% accuracy; give the maximum missed and false alarms (each ≤5); no validation plan receives no credit. |
+
+#### DG2 example (data-sparse track)
+
+> **Why it is good:** The paper does not provide device-level values such as electrode thickness, substrate material, or interlayer spacing, but it gives the topology (eight PTFE tubes, an Al electrode array, and insole integration) and system performance (charging time and positioning accuracy). The question asks the evaluated model to reverse-design the topology from performance targets and justify every choice—why eight tubes rather than four, how to arrange electrodes for uniform response, and which insole locations produce the strongest signals. Every structural feature must be reverse-validated by stating what happens if it is removed or changed. General knowledge can give only a generic solution and cannot recover the paper's topology details.
+
+**Background:**
+
+A research group develops an insole-based self-powered positioning system. Walking pressure drives triboelectric generation; harvested energy intermittently powers a Bluetooth beacon through a collection circuit for indoor gait-position tracking. The paper provides only the following information:
+
+**Structural topology (no dimensions):** Eight vertical hollow PTFE tubes (outer diameter 8 mm, inner diameter 6 mm, height 15 mm) are arranged inside the insole according to the foot-pressure distribution. Segmented aluminum-foil electrodes are placed at the top and bottom of the tube array. During a step, the tubes deform radially and undergo contact separation with the electrodes.
+
+**Measured performance:** A single step charges the storage capacitor enough to power one Bluetooth broadcast; indoor positioning accuracy is approximately 0.5 m; continuous walking maintains periodic beacon broadcasts.
+
+**Question:**
+
+The paper does not disclose device-level parameters such as electrode thickness, substrate material, or interlayer spacing. Starting from the performance targets above, complete the topology design and justification:
+
+1. **Array topology:** How should the eight tubes be arranged in the insole plane? Draw a distribution diagram and explain the placement logic of each tube. Why eight—what problems would four or sixteen cause?
+2. **Electrode configuration:** Why use segmented Al electrodes instead of one continuous sheet? Where should segment boundaries be placed, and how should they correspond to foot-pressure zones?
+3. **Deformation mechanism:** Why use hollow tubes instead of solid cylinders or a flat sheet? What advantages does radial-compression contact separation have over axial compression?
+4. **Position tracking:** How can foot position be extracted from differences among tube outputs? Which channels must be routed independently?
+5. **Reverse validation:** Choose two structural features (for example, the hollow structure and segmented electrodes) and explain which metric (charging rate, positioning accuracy, or broadcast period) would degrade if each feature were removed or changed, and why.
+
+**Scoring rubric (total 1.0):**
+
+| Dimension | Weight | Scoring points |
+|------|----------|----------|
+| Array topology | 0.25 | Cover high-pressure sole regions, mainly forefoot and heel (for example, 4+4 or 5+3); provide a distribution diagram and placement logic for every tube; justify the eight-tube trade-off (four gives insufficient positioning resolution, sixteen weakens per-tube output and increases cost); missing the count trade-off loses half of this point. |
+| Electrode segmentation | 0.20 | Align segments with foot-pressure zones (independent forefoot/midfoot/heel segments); map position to different segment amplitudes; a continuous electrode receives 0 because it cannot localize position. |
+| Deformation mechanism | 0.20 | Hollow tubes are easy to compress radially (low stiffness), allow large deformation, and increase contact area during compression; compare with a solid column (too stiff to compress) and a flat sheet (no localized response); no comparison receives no credit. |
+| Position tracking | 0.20 | Route at least independent forefoot and heel channels; infer position from inter-channel amplitude ratios; explain the relationship between channel count and positioning resolution; a merged single-channel output cannot localize and loses the full point. |
+| Reverse validation | 0.15 | For two features, provide a complete causal chain of “what metric degrades + why,” such as hollow removed → radial stiffness increases → deformation decreases → charge per step decreases → charging rate decreases → broadcast period increases; “it gets worse” without a mechanism receives no credit. |
+
+#### DG3 example
+
+> **Why it is good:** Every value that would otherwise require calculation (the PVDF leading-edge coordinate, each layer's z range, and the overhanging steel length) is supplied, so the task tests modeling rather than calculation. Scoring ignores written descriptions and checks only geometric correctness of the model file. The four unintuitive details most likely to be silently omitted are the Cu electrode on the underside of the steel foil, the rear placement of PVDF, the 45° diamond holes only in the front half, and the 40.3 mm steel overhang beyond the PCB.
+
+**Background:**
+
+A wing-surface stall-sensing unit is installed on the upper surface of an NACA0012 airfoil (200 mm chord). The lower-left corner of the PCB's leading edge is the coordinate origin (`x` chordwise, `y` spanwise, `z` normal to the wing). Complete component geometry:
+
+**1. PCB substrate**
+
+- `x = 0–59.7 mm`, `y = 0–22.0 mm`, `z = 0–1.6 mm`
+- Material: FR4 (`ρ = 1900 kg/m³`)
+
+**2. Modified silk-protein triboelectric layer**
+
+- `x = 0–59.7 mm`, `y = 0–22.0 mm`, `z = 1.600–1.618 mm` (18 μm thick)
+
+**3. PVDF piezoelectric film**
+
+- `x = 39.4–59.7 mm`, `y = 6.0–16.0 mm`, `z = 1.618–1.728 mm` (110 μm thick)
+- One-micrometer silver electrodes on both faces are included in this thickness; polarization is along the z axis.
+
+**4. Foam spacer**
+
+- `x = 0–5.0 mm`, `y = 0–22.0 mm`, `z = 1.618–4.618 mm` (3.0 mm high)
+
+**5. 304 stainless-steel suspended foil**
+
+- Overall size: `x = 0–100.0 mm`, `y = 0–22.0 mm`, `z = 4.618–4.718 mm` (0.1 mm thick)
+- `x = 0–5.0 mm`: fixed end supported by the spacer; `x = 5.0–100.0 mm`: freely suspended.
+- `x = 59.7–100.0 mm` (40.3 mm long): fully overhangs the PCB.
+- **Copper back electrode:** covers the **underside** of the steel foil (the `z = 4.618 mm` face), 3 μm thick (`z = 4.615–4.618 mm`), with no copper inside the holes.
+- **Perforated region:** `x = 0–50.0 mm`; squares rotated by 45° (diamonds), with 3.0 mm × 3.0 mm diagonals.
+  - Odd columns: hole centers `x = 5.0, 12.5, 20.0, 27.5, 35.0, 42.5 mm`; `y = 3.0, 8.5, 14.0, 19.5 mm`.
+  - Even columns: hole centers `x = 8.75, 16.25, 23.75, 31.25, 38.75, 46.25 mm`; `y = 5.75, 11.25, 16.75 mm`.
+  - Hole edges are at least 2.0 mm from the outer steel profile.
+- **Solid region:** `x = 50.0–100.0 mm`, with no holes.
+
+**Task:**
+
+Use a 3D modeling tool (FreeCAD / SolidWorks / Fusion 360 / OpenSCAD, etc.) to generate the complete assembly and output a model file or a complete executable modeling script. It must satisfy:
+
+1. All five components are independent solids with exactly the coordinates and parameters above.
+2. The front half of the steel foil (`x = 0–50 mm`) contains the complete hole array; holes are 45°-rotated diamonds, and odd/even column y coordinates follow the stated offset pattern.
+3. The copper back electrode is an independent thin layer attached to the underside of the steel foil, with no copper in the holes.
+4. Output an xz section (`y = 11 mm`) in which every layer is visible and thickness magnitudes are correct.
+5. Output an xy top view of the steel foil in which the perforated/solid boundary at `x = 50 mm` is clear.
+
+**Scoring rubric (total 1.0):**
+
+| Dimension | Weight | Scoring points |
+|------|----------|----------|
+| Component completeness | 0.25 | All five components are independent solids; the Cu electrode is a separate 3 μm layer on the steel underside rather than fused to the steel; PVDF starts at `z = 1.618 mm`, flush with the CSFE top surface. |
+| Assembly correctness | 0.25 | The steel section `x = 59.7–100.0 mm` is suspended with no support solid; PVDF starts at `x = 39.4 mm`; spacer `z = 1.618–4.618 mm`; steel bottom `z = 4.618 mm` aligns with the spacer top. |
+| Perforation-array geometry | 0.30 | Holes are diamonds (45° rotated), not squares; odd/even column y coordinates are offset in a triangular stagger rather than a right-angle grid; holes exist only for `x < 50 mm`; the region `x > 50 mm` is solid; hole edge clearance is ≥2 mm. |
+| Section view | 0.10 | The xz section shows micrometer-scale films (CSFE 18 μm, Cu 3 μm) together with the millimeter-scale substrate; the air gap at `x = 5 mm` is approximately 3 mm. |
+| Top view | 0.10 | The perforated/solid boundary at `x = 50 mm` is clear, and the PVDF outline (`x = 39.4–59.7 mm`, `y = 6–16 mm`) is identifiable. |
 
 ---
 
-#### DG2 例子
+### 5.7 Controlled `subcategory` list
 
-> **为什么好：** 覆盖「器件连接→阵列集成→调理采集→处理判定」完整链路，任何一环缺失都扣分；通识答案倾向只答器件结构而漏掉采样率奈奎斯特核算与延迟预算分解——采样率须 ≥ 2×40 Hz = 80 Hz（论文实采 1 kHz，25× 过采样），延迟预算须逐环节分解后与 ≤ 500 ms 总约束闭合；STD 窗口 1000 点在 1 kHz 采样下即 1 s 分辨率，与 150 ms 无线延迟的时间自洽性是论文的非通识贡献。**本例为数据充分档。**
+`subcategory` is controlled: choose the best-matching one of the 15 sensing scenarios for L2/L3, and choose the candidate subcategory associated with the question type for L1.
 
-**背景：**
-某研究组为固定翼无人机（翼展 1420 mm，巡航 7.9 m/s，总重 1810 g）部署机载失速预警传感系统。已有传感单元：悬浮钢片（厚 0.1 mm）+ 改性蚕丝蛋白摩擦层 + PVDF 后段集成，单单元风洞标定数据：未失速 T-signal STD ≈ 0.25 V，失速后 T-signal 骤降至噪声底（< 0.3 V），P-signal 峰值升至 ≈ 2 V；钢片拍击主频约 40 Hz。
-
-**约束：**
-- 系统总质量 ≤ 10 g（含传感单元与采集电路）
-- 每侧机翼 1 个传感单元，双侧共 2 单元 4 路信号（T×2 + P×2）
-- 无线预警端到端延迟 ≤ 500 ms
-- 100 次独立失速测试预警准确率 ≥ 95%
-
-**问题：**
-设计完整传感系统，按四个环节逐项给出量化方案：
-
-1. **器件连接**：T/P 两路信号从器件各电极到采集板的引出方式与屏蔽
-2. **阵列集成**：2 个单元在翼面的安装位置（展向百分比）与气动依据
-3. **信号调理与采集**：每路放大倍数与量程、采样率（须做奈奎斯特核算）、ADC 通道数与位宽、无线传输方案与延迟预算逐环节分解
-4. **信号处理与判定**：T 路与 P 路各用什么算法、判定阈值取值依据（引用标定数据）、双路联合判定逻辑
-
-**评分 Rubric（总分 1.0）：**
-
-| 维度 | 分值 | 评分要点 |
-|------|------|----------|
-| 器件连接 | 0.15 | T 路：钢片背电极 + 摩擦层背电极差分引出；P 路：PVDF 上下银电极独立引出；两路独立屏蔽防串扰；缺任一电极引出方式扣半分 |
-| 阵列位置 | 0.15 | 展向 60–80%（翼尖局部失速先发区，P-signal 更强）；须给百分比数值 + 一句展向载荷分布理由；只说"翼面"无位置数值不得分 |
-| 采样率核算 | 0.20 | 写出奈奎斯特判据 f_s ≥ 2×40 = 80 Hz 并给出实际取值（≥ 1 kHz，25× 过采样保证 STD 窗口统计稳定）；ADC 4 通道、≥ 12 bit（分辨 0.3 V 阈值须 < 1/10 量程）；无数值不得分 |
-| 延迟预算 | 0.20 | 逐环节分解且总和 ≤ 500 ms：采集缓冲 + STD/Prominence 运算 + 无线传输（论文实测 ≈ 150 ms）+ 终端判定；须列出各环节数值并求和 |
-| 算法与阈值 | 0.20 | T 路 STD（窗口 1000 点，1 s 分辨率），阈值 0.3 V（噪声底）；P 路 Prominence 孤立峰检测（阈值高于背景 2 V 级）；联合逻辑：T 骤降 + P 出现 → 失速告警；阈值须引用题干标定数据 |
-| 准确率验证 | 0.10 | 说明以 100 次独立失速测试验证 ≥ 95%；给出漏报/误报次数上限（各 ≤ 5 次）；无验证方案不得分 |
-
----
-
-#### DG2 例子（数据不足档）
-
-> **为什么好：** 论文未给电极厚度/基底材料/层间间距等器件级数值，但给出了结构拓扑（8 根 PTFE 管 + Al 电极阵列 + 鞋垫集成）与系统性能（充电时间、定位精度）。本题要求被测模型从性能目标出发**反向设计结构拓扑**并逐项论证——为什么是 8 根管而非 4 根、电极怎么排布响应才均匀、鞋垫哪个位置信号最强；每个结构特征都必须给出「若去掉/改变该特征会发生什么」的反向验证，通识只能给出笼统方案，无法还原论文的阵列拓扑细节。
-
-**背景：**
-某研究组开发鞋垫式自驱动位置监测系统：步行踩踏驱动摩擦电发电，能量经收集电路给蓝牙信标间歇供电，实现室内步态位置追踪。论文仅给出以下信息——
-**结构拓扑（无尺寸）**：8 根竖直 PTFE 中空圆管（外径 8 mm、内径 6 mm、高 15 mm）按足压分布排列于鞋垫内；铝箔电极分段布置于管阵列上下两端；踩踏时圆管径向压缩变形与电极接触-分离。
-**性能实测**：单步踩踏可给储能电容充电至驱动一次蓝牙广播；室内定位精度约 0.5 m；连续步行可维持信标周期性广播。
-
-**问题：**
-论文未公开器件级参数（电极厚度、基底材料、层间距等）。请从上述性能目标出发，完成结构拓扑设计与论证：
-
-1. **阵列拓扑**：8 根圆管在鞋垫平面内如何排布（画出分布示意并说明每根管的位置逻辑）？为什么是 8 根——4 根或 16 根分别会导致什么问题？
-2. **电极配置**：Al 电极为何采用分段式而非整片式？分段边界应设在哪里，与足压分布有什么对应关系？
-3. **变形机制**：为什么用中空圆管而非实心圆柱或平板？径向压缩接触-分离相比轴向压缩有什么优势？
-4. **位置追踪**：踩踏位置信息如何从多管输出差异中提取？需要哪些通道独立引出？
-5. **反向验证**：任选两个上述结构特征（如中空结构、分段电极），论证若去掉或改变该特征，哪项性能指标（充电速率/定位精度/广播周期）会退化、退化机理是什么。
-
-**评分 Rubric（总分 1.0）：**
-
-| 维度 | 分值 | 评分要点 |
-|------|------|----------|
-| 阵列拓扑 | 0.25 | 排布覆盖足底高压区（前掌 + 足跟为主，8 根分布如 4+4 或 5+3）；须给分布示意与每根位置逻辑；论证 8 根权衡（4 根定位分辨率不足、16 根单管输出过弱且成本高），无根数权衡论证扣半分 |
-| 电极分段 | 0.20 | 分段与足压分区对应（前掌/中足/足跟各自独立段），踩踏位置→不同段输出幅度差异；答整片电极直接 0 分（无法定位） |
-| 变形机制 | 0.20 | 中空管径向易压缩（低刚度）+ 大变形量 + 接触面积随压缩增大；对比实心柱（刚度太高踩不动）与平板（无局部化响应）；无对比论证不得分 |
-| 位置追踪 | 0.20 | 至少前掌/足跟两区独立通道引出，踩踏位置由通道间幅度比反演；说明通道数与定位分辨率的对应；单通道合并输出无法定位，扣全分 |
-| 反向验证 | 0.15 | 任选两个特征，给出「去掉后退化什么指标 + 机理」的完整因果链（如去中空→径向刚度↑→踩踏变形量↓→单步电荷量↓→充电速率↓→广播周期变长）；只说"变差"不给机理不得分 |
-
----
-
-#### DG3 例子
-
-> **为什么好：** 所有需要计算才能得到的数值（PVDF 前缘坐标、各层 z 范围、钢片悬空长度）直接给出，不需要计算，只考建模；评分不看文字描述，只看模型文件几何正确性——Cu 电极在钢片下表面、PVDF 居后段、45° 斜方形镂空仅在前半段、钢片超出 PCB 40.3 mm 悬空，这四个非直觉特征在建模时最容易被默认覆盖。
-
-**背景：**
-翼面失速传感单元安装于 NACA0012 翼型（弦长 200 mm）上翼面，以 PCB 前缘左下角为坐标原点（x 弦向、y 展向、z 翼面法向）。各部件完整几何参数如下：
-
-**① PCB 基板**
-- x = 0–59.7 mm，y = 0–22.0 mm，z = 0–1.6 mm
-- 材料：FR4（ρ = 1900 kg/m³）
-
-**② 改性蚕丝蛋白摩擦层**
-- x = 0–59.7 mm，y = 0–22.0 mm，z = 1.600–1.618 mm（厚 18 μm）
-
-**③ PVDF 压电薄膜**
-- x = 39.4–59.7 mm，y = 6.0–16.0 mm，z = 1.618–1.728 mm（厚 110 μm）
-- 上下各 1 μm 银电极已含于厚度内；极化方向 z 轴
-
-**④ 泡沫垫片**
-- x = 0–5.0 mm，y = 0–22.0 mm，z = 1.618–4.618 mm（高 3.0 mm）
-
-**⑤ 304 不锈钢悬浮片**
-- 总尺寸：x = 0–100.0 mm，y = 0–22.0 mm，z = 4.618–4.718 mm（厚 0.1 mm）
-- x = 0–5.0 mm：固定端（通过垫片支撑）；x = 5.0–100.0 mm：自由悬挂
-- x = 59.7–100.0 mm（长 40.3 mm）：完全悬空于 PCB 之外
-- **铜背电极**：覆盖钢片**下表面**（z = 4.618 mm 面），厚 3 μm（z = 4.615–4.618 mm），镂空孔内无覆盖
-- **镂空区域**：x = 0–50.0 mm，正方形旋转 45°（菱形），对角线 3.0 mm × 3.0 mm
-  - 奇数列：孔中心 x = 5.0, 12.5, 20.0, 27.5, 35.0, 42.5 mm；y = 3.0, 8.5, 14.0, 19.5 mm
-  - 偶数列：孔中心 x = 8.75, 16.25, 23.75, 31.25, 38.75, 46.25 mm；y = 5.75, 11.25, 16.75 mm
-  - 孔边缘距钢片外轮廓 ≥ 2.0 mm
-- **实体区域**：x = 50.0–100.0 mm，无镂空
-
-**任务：**
-使用三维建模软件（FreeCAD / SolidWorks / Fusion 360 / OpenSCAD 等均可）生成完整装配体，输出模型文件或完整可执行建模脚本，须满足：
-
-1. 5 个部件各为独立实体，坐标与上述参数完全一致
-2. 钢片前半段（x = 0–50 mm）生成完整镂空阵列，孔形为 45° 旋转菱形，奇偶列 y 坐标按上述错位排列
-3. 铜背电极作为独立薄层贴于钢片下表面，镂空处无铜
-4. 输出 xz 截面图（y = 11 mm 切面），各层在截面中可见且厚度量级正确
-5. 输出钢片 xy 俯视图，镂空区与实体区边界（x = 50 mm）清晰可见
-
-**评分标准（总分 1.0）：**
-
-| 维度 | 分值 | 评分要点 |
-|------|------|----------|
-| 部件完整性 | 0.25 | 5 个部件全部为独立实体；Cu 电极为钢片下表面独立薄层（3 μm），非与钢片合并；PVDF z 起点 = 1.618 mm（紧贴 CSFE 上表面） |
-| 装配正确性 | 0.25 | 钢片 x = 59.7–100.0 mm 段悬空（无任何支撑实体）；PVDF x 起点 = 39.4 mm；垫片 z = 1.618–4.618 mm；钢片底面 z = 4.618 mm 与垫片顶面对齐 |
-| 镂空阵列几何 | 0.30 | 孔为菱形（45° 旋转），非正方形；奇偶列 y 坐标错位（三角交错，非直角网格）；镂空仅存在于 x < 50 mm；x > 50 mm 实体无孔；孔边距外轮廓 ≥ 2 mm |
-| 截面图 | 0.10 | xz 截面中 μm 级薄膜（CSFE 18 μm、Cu 3 μm）与 mm 级基板同时可见；气隙在 x = 5 mm 处约 3 mm |
-| 俯视图 | 0.10 | 镂空区与实体区边界 x = 50 mm 清晰；PVDF 轮廓（x = 39.4–59.7 mm，y = 6–16 mm）可识别 |
-
----
-
-### 5.7 subcategory 列表
-
-subcategory 受控列表（L2/L3 题从 15 个传感场景中选最匹配一个，L1 题从对应题型的候选子方向中选）：
-
-| 场景 | 说明 |
+| Scenario | Description |
 |---|---|
-| aviation | 航空航天：失速/湍流/风速/转速/结构健康 |
-| wearable | 可穿戴健康：脉搏/呼吸/步态/心率 |
-| tactile | 触觉与电子皮肤：压力/触觉/力 |
-| chemical | 化学与生物传感：离子/湿度/气体/液固 |
-| hmi | 人机交互：手势/触摸/智能表面 |
-| iot | IoT 与智能基础设施：交通/工业/楼宇 |
-| biomedical | 植入式与医疗诊断：体内传感/POCT |
-| marine | 海洋与蓝色能源传感：水流/波浪/腐蚀 |
-| wind | 风能与环境监测：风速/风向/气象 |
-| motion | 运动与姿态识别：肢体/步态/动作捕捉 |
-| acoustic | 声学与振动传感：声波/噪声/机械振动 |
-| robotics | 机器人与灵巧操作：机械臂/夹爪/姿态 |
-| smarttextile | 智能纺织与服装：织物传感/交互服饰 |
-| energyharv | 自驱动能量收集监测：设备状态/功耗感知 |
-| space | 空间与极端环境：空间碎片/辐射/极端温压 |
+| aviation | Aerospace: stall/turbulence/wind speed/rotational speed/structural health |
+| wearable | Wearable health: pulse/respiration/gait/heart rate |
+| tactile | Tactile sensing and electronic skin: pressure/touch/force |
+| chemical | Chemical and biosensing: ions/humidity/gas/liquid–solid interfaces |
+| hmi | Human–machine interaction: gestures/touch/smart surfaces |
+| iot | IoT and smart infrastructure: transportation/industry/buildings |
+| biomedical | Implantable sensing and medical diagnosis: in-body sensing/POCT |
+| marine | Marine and blue-energy sensing: water flow/waves/corrosion |
+| wind | Wind energy and environmental monitoring: wind speed/wind direction/weather |
+| motion | Motion and posture recognition: limbs/gait/motion capture |
+| acoustic | Acoustic and vibration sensing: sound/noise/mechanical vibration |
+| robotics | Robotics and dexterous manipulation: robotic arms/grippers/posture |
+| smarttextile | Smart textiles and clothing: textile sensing/interactive garments |
+| energyharv | Self-powered energy-harvesting monitoring: device state/power awareness |
+| space | Space and extreme environments: space debris/radiation/extreme temperature and pressure |
 
-每篇论文出题数：对每个论文能支撑的题型，尽可能多出，不设固定配额。
+For each paper, generate as many questions as possible for every question type the paper supports; there is no fixed quota.
 
-### 5.8 L1 出题规则（按需出题）
+### 5.8 L1 question-writing rules (on demand)
 
-1. 读论文后，判断论文内容是否与某个 BK 子方向特别匹配（如论文详细讨论接触起电机制 → BK1/triboelectric_mechanism；对比了多种工作模式 → BK2/sliding 等）。
-2. 匹配则出题，不匹配则跳过，不强制凑题。
-3. 出题时注意角度多样，避免同一子方向出重复角度的题。
+1. After reading the paper, determine whether it is especially relevant to a BK subcategory (for example, a detailed discussion of contact electrification supports BK1/`triboelectric_mechanism`, while comparisons of multiple operating modes support BK2/`sliding`, etc.).
+2. If it matches, write questions; if not, skip it. Do not force questions merely to fill a quota.
+3. Use diverse angles and avoid repeating the same angle within one subcategory.
 
 ---
 
-## 六、QA JSON Schema
+## 6. QA JSON schema
 
-写完用 `python3 scripts/reviewer_writer/qa_schema_validator.py <qa_file>` 自检，不过则修正。
+After writing, self-check with `python3 scripts/reviewer_writer/qa_schema_validator.py <qa_file>` and repair any failure.
 
-### 通用字段（所有题型）
+### Common fields (all question types)
 
 ```json
 {
@@ -657,51 +660,55 @@ subcategory 受控列表（L2/L3 题从 15 个传感场景中选最匹配一个�
   "layer": "L2",
   "subcategory": "aviation",
   "source_paper_id": "Xu2023_NatComm_stall",
-  "source_excerpt": "原文关键片段…（出处：Section 3, Fig.4）",
-  "question": "题干…",
+  "source_excerpt": "Key passage from the paper… (Source: Section 3, Fig. 4)",
+  "question": "Question stem…",
   "scoring": {"mechanism": "A"},
   "multi_step_reasoning": null
 }
 ```
 
-> qa_id 与文件名一致，格式 `{layer}_{type}_{subcategory}_{paper_id}_{题号}`。L1 题的 subcategory 填对应题型的子方向名（如 `triboelectric_mechanism`）；L2/L3 题填传感场景名（如 `aviation`）。
+> `qa_id` must match the filename and use `{layer}_{type}_{subcategory}_{paper_id}_{number}`. For L1, `subcategory` is the type-specific subcategory (such as `triboelectric_mechanism`); for L2/L3, it is a sensing scenario (such as `aviation`).
 
-### 题型特定字段
+### Type-specific fields
 
-**BK / RP1 / RP2 / RP3（纯选择，5 选 1）**
+**BK / RP1 / RP2 / RP3 (pure multiple choice, 5 options)**
+
 ```json
 "options": {"A": "...", "B": "...", "C": "...", "D": "...", "E": "..."},
 "answer": "C",
 "scoring": {"mechanism": "A"}
 ```
 
-**RP4（长推理，5 选 1，必须附推理步骤）**
+**RP4 (long reasoning, 5 options, reasoning steps required)**
+
 ```json
 "options": {"A": "...", "B": "...", "C": "...", "D": "...", "E": "..."},
 "answer": "C",
-"multi_step_reasoning": ["步骤1（引用具体数值）…", "步骤2…", "步骤3…", "步骤4…"],
+"multi_step_reasoning": ["Step 1 (cite concrete values)…", "Step 2…", "Step 3…", "Step 4…"],
 "scoring": {"mechanism": "A"}
 ```
 
-**DG1 / DG2（开放简答）**
+**DG1 / DG2 (open-ended short answer)**
+
 ```json
-"rubric": [{"key": "含摩擦层", "weight": 0.2}, ...],
+"rubric": [{"key": "contains triboelectric layer", "weight": 0.2}, ...],
 "reference_answer": "…",
-"multi_step_reasoning": ["步骤1…", ...],
+"multi_step_reasoning": ["Step 1…", ...],
 "scoring": {"mechanism": "A+B", "rubric_keys": [...]}
 ```
 
-**DG3（CAD 建模）**
+**DG3 (CAD modeling)**
+
 ```json
 "required_parts": [...],
 "scenario_checklist": [...],
 "target_dimensions": {...},
 "scoring_detail": {
-  "execution": "判分规则…",
-  "structure": "必需部件齐全度判分规则…",
-  "scenario": "场景适配判分规则…",
-  "geometry": "几何量级判分规则…",
-  "efficiency": "效率阈值判分规则…"
+  "execution": "Execution scoring rule…",
+  "structure": "Required-component completeness rule…",
+  "scenario": "Scenario-fit scoring rule…",
+  "geometry": "Geometric-magnitude scoring rule…",
+  "efficiency": "Efficiency-threshold scoring rule…"
 },
 "scoring": {
   "mechanism": "A+B",
@@ -710,13 +717,13 @@ subcategory 受控列表（L2/L3 题从 15 个传感场景中选最匹配一个�
 }
 ```
 
-> 仅 RP4 / DG1 / DG2 必填 multi_step_reasoning；BK / RP1 / RP2 / RP3 留 null。
+> `multi_step_reasoning` is required only for RP4 / DG1 / DG2. Leave it `null` for BK / RP1 / RP2 / RP3.
 
 ---
 
-## 七、输出规范
+## 7. Output requirements
 
-- 每篇论文独立处理，独立写自己的 `cache/{paper_id}/`，互不干扰。
-- 不得编造论文没有的内容，每题的 source_excerpt 必须真实来自该论文。
-- 每题必附 source_excerpt（100–300 字 + 出处），仅供溯源，绝不放进题干。
-- 输出严格符合 schema，写完用 `python3 scripts/reviewer_writer/qa_schema_validator.py <qa_file>` 自检，不过则修正。
+- Process each paper independently and write to its own `cache/{paper_id}/`; do not interfere with other papers.
+- Do not invent information absent from the paper. Every `source_excerpt` must genuinely come from that paper.
+- Every question must include a `source_excerpt` (100–300 words plus the source location), used only for traceability and never inserted into the question stem.
+- Output must strictly conform to the schema. After writing, run `python3 scripts/reviewer_writer/qa_schema_validator.py <qa_file>` and repair any failure.
