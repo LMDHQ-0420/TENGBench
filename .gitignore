@@ -1,22 +1,16 @@
-# 论文数据（不推）
-papers/inbox/
-papers/qualified/
-papers/rejected/
+# 论文与 benchmark 数据（不推）
+papers/
 cache/
-
-# benchmark 产物（不推）
-benchmark/questions/
-benchmark/rubrics/
-benchmark/scorers/
+benchmark/
+*.zip
 
 # 评测运行结果和模型密钥
 evaluation/output/
 evaluation/models.json
+test/models.yaml
 
 # 状态文件（不推）
 state/
-logs/
-
 # Claude 配置（不推）
 .claude/
 
