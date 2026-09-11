@@ -8,7 +8,7 @@
   面向摩擦纳米发电机科研场景的大语言模型分层测评基准
 </p>
 
-> 论文 *TENGBench: Can Large Language Models Understand, Reason about, and Design Triboelectric Nanogenerator-Based Sensors?* 的具体实现。
+> 论文 *TENGBench: Can Large Language Models Understand, Reason about, and Design Triboelectric Nanogenerator-Based Sensors?* 的官方实现。
 
 <p align="center">
   <a href="README.md">English</a> · <a href="#快速开始">快速开始</a> · <a href="#项目结构">项目结构</a>
