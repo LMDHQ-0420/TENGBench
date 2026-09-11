@@ -1,32 +1,51 @@
-# 论文与 benchmark 数据（不推）
+# Local datasets and generated benchmark artifacts
 papers/
 cache/
 benchmark/
 *.zip
 
-# 评测运行结果和模型密钥
-evaluation/output/
-evaluation/models.json
-test/models.yaml
+# Evaluation outputs and private model credentials
+evaluation/api/models.yaml
+result/
+result-backup/
+result-simulation/
+logs/
 
-# 状态文件（不推）
+# Generated analysis data and figures (keep plotting source code)
+evaluation/figures/**/*.csv
+evaluation/figures/**/*.json
+evaluation/figures/**/*.png
+evaluation/figures/**/*.svg
+evaluation/figures/**/*.pdf
+evaluation/figures/**/backup_*/
+evaluation/figures/_retired/
+!evaluation/figures/07_model_performance_timeline/asset/*.svg
+
+# Local pipeline state
 state/
-# Claude 配置（不推）
-.claude/
 
-# Python 缓存
+# Local agent/editor configuration
+.claude/
+.venv/
+.env
+.env.*
+
+# Python caches and test caches
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 *.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
 
 # macOS
 .DS_Store
 .AppleDouble
 .LSOverride
 
-# 临时文件
+# Temporary files
 *.tmp
 *.bak
 *.swp

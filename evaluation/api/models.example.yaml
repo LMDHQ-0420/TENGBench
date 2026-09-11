@@ -1,0 +1,14 @@
+# Copy this file to models.yaml and keep that private file local.
+# api_key_env names an environment variable; never commit a literal API key.
+
+gpt-example:
+  base_url: https://api.openai.com/v1
+  api_key_env: OPENAI_API_KEY
+  model: gpt-5.2
+  enable_thinking: true
+
+compatible-api-example:
+  base_url: https://your-provider.example/v1
+  api_key_env: PROVIDER_API_KEY
+  model: your-model-id
+  enable_thinking: false
