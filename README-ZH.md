@@ -192,8 +192,3 @@ TENGBench/
 python -m unittest discover -s evaluation/api/tests
 python -m unittest discover -s evaluation/skill/tests
 ```
-
-## 需要你提供的 SVG 文件名
-
-- 项目 Logo：`asset/logo.svg`
-- 多模型完整测评结果：`asset/benchmark-results.svg`

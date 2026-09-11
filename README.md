@@ -192,8 +192,3 @@ The local workflow also creates `papers/`, `cache/`, `benchmark/`, `state/`, `lo
 python -m unittest discover -s evaluation/api/tests
 python -m unittest discover -s evaluation/skill/tests
 ```
-
-## Asset filenames
-
-- Project logo: `asset/logo.svg`
-- Complete multi-model results: `asset/benchmark-results.svg`
