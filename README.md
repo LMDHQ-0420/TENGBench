@@ -8,13 +8,15 @@
   A layered benchmark for evaluating large language models on triboelectric nanogenerator research.
 </p>
 
+> Official implementation of the paper *TENGBench: Can Large Language Models Understand, Reason about, and Design Triboelectric Nanogenerator-Based Sensors?*
+
 <p align="center">
   <a href="README-ZH.md">中文</a> · <a href="#quick-start">Quick start</a> · <a href="#project-structure">Project structure</a>
 </p>
 
 ## News
 
-- 📊 **[2026/09/11]** Released the complete TENGBench dataset.
+- 📊 **[2026/09/11]** Released the [complete TENGBench dataset](https://huggingface.co/datasets/LMDHQ-0420/TENGBench).
 - 🚀 **[2026/09/01]** Released the TENGBench project source code.
 
 ## Full benchmark results

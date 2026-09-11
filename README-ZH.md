@@ -8,13 +8,15 @@
   面向摩擦纳米发电机科研场景的大语言模型分层测评基准
 </p>
 
+> 论文 *TENGBench: Can Large Language Models Understand, Reason about, and Design Triboelectric Nanogenerator-Based Sensors?* 的具体实现。
+
 <p align="center">
   <a href="README.md">English</a> · <a href="#快速开始">快速开始</a> · <a href="#项目结构">项目结构</a>
 </p>
 
 ## 新闻
 
-- 📊 **[2026/09/11]** 发布 TENGBench 完整数据集。
+- 📊 **[2026/09/11]** 发布 [TENGBench 完整数据集](https://huggingface.co/datasets/LMDHQ-0420/TENGBench)。
 - 🚀 **[2026/09/01]** TENGBench 项目代码正式上线。
 
 ## 完整测评结果
