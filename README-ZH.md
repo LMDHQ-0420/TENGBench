@@ -14,7 +14,7 @@
 
 ## 新闻
 
-- 📊 **[2026/09/11]** 发布 TENGBench 完整数据集与多模型测评结果。
+- 📊 **[2026/09/11]** 发布 TENGBench 完整数据集。
 - 🚀 **[2026/09/01]** TENGBench 项目代码正式上线。
 
 ## 完整测评结果
@@ -107,14 +107,6 @@ python evaluation/api/run.py --model gpt-example --judge gpt-example
 
 将 `evaluation/skill/skills/` 中的 Skill 安装到 Codex，先运行 `tengbench-test-orchestrator` 完成答题，再运行 `tengbench-judge-orchestrator` 评审待处理的 L3 答案。两个流程只通过 `evaluation/skill/scripts/` 下的受控读写脚本访问题目和结果。
 
-### 重新生成分析图
-
-```bash
-python evaluation/figures/generate_all_figures.py
-```
-
-`evaluation/figures/` 内生成的 CSV、JSON、PNG、PDF 和 SVG 均视为本地输出，不会提交到 Git。
-
 ## 项目结构
 
 ```text
@@ -125,15 +117,13 @@ TENGBench/
 │   └── skills/                  # 编排、论文审阅出题、QA 质检 Skill
 ├── evaluation/
 │   ├── api/                     # 并发 API 测评与契约测试
-│   ├── skill/                   # Codex Skill 测评、受控读写与测试
-│   ├── figures/                 # 分析与绘图源代码
-│   └── scripts/                 # 辅助结果生成脚本
+│   └── skill/                   # Codex Skill 测评、受控读写与测试
 ├── requirements.txt
 ├── README.md
 └── README-ZH.md
 ```
 
-本地流程还会生成 `papers/`、`cache/`、`benchmark/`、`state/`、`logs/`、`result/` 和 `result-simulation/`；这些目录不会进入提交。
+本地流程还会生成 `papers/`、`cache/`、`benchmark/`、`state/`、`logs/`、`result/`、`result-simulation/` 和 `fig/`；这些目录不会进入提交。
 
 ## 测试
 

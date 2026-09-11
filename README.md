@@ -14,7 +14,7 @@
 
 ## News
 
-- 📊 **[2026/09/11]** Released the complete TENGBench dataset and multi-model evaluation results.
+- 📊 **[2026/09/11]** Released the complete TENGBench dataset.
 - 🚀 **[2026/09/01]** Released the TENGBench project source code.
 
 ## Full benchmark results
@@ -107,14 +107,6 @@ python evaluation/api/run.py --model gpt-example --judge gpt-example
 
 Install the skills in `evaluation/skill/skills/` in Codex, then start the answer workflow with `tengbench-test-orchestrator`. After the model answers are saved, run `tengbench-judge-orchestrator` to score pending L3 responses. Both workflows use the guarded readers and writers under `evaluation/skill/scripts/`.
 
-### Rebuild analysis figures
-
-```bash
-python evaluation/figures/generate_all_figures.py
-```
-
-Derived CSV, JSON, PNG, PDF, and SVG files under `evaluation/figures/` are local outputs and are ignored by Git.
-
 ## Project structure
 
 ```text
@@ -125,15 +117,13 @@ TENGBench/
 │   └── skills/                  # Orchestrator, reviewer/writer, QA validator
 ├── evaluation/
 │   ├── api/                     # Concurrent API evaluator and contract tests
-│   ├── skill/                   # Codex skill evaluator, guarded I/O, tests
-│   ├── figures/                 # Analysis and plotting source code
-│   └── scripts/                 # Auxiliary result-generation utilities
+│   └── skill/                   # Codex skill evaluator, guarded I/O, tests
 ├── requirements.txt
 ├── README.md
 └── README-ZH.md
 ```
 
-The local workflow also creates `papers/`, `cache/`, `benchmark/`, `state/`, `logs/`, `result/`, and `result-simulation/`. These directories are intentionally absent from commits.
+The local workflow also creates `papers/`, `cache/`, `benchmark/`, `state/`, `logs/`, `result/`, `result-simulation/`, and `fig/`. These directories are intentionally absent from commits.
 
 ## Tests
 

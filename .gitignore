@@ -11,15 +11,8 @@ result-backup/
 result-simulation/
 logs/
 
-# Generated analysis data and figures (keep plotting source code)
-evaluation/figures/**/*.csv
-evaluation/figures/**/*.json
-evaluation/figures/**/*.png
-evaluation/figures/**/*.svg
-evaluation/figures/**/*.pdf
-evaluation/figures/**/backup_*/
-evaluation/figures/_retired/
-!evaluation/figures/07_model_performance_timeline/asset/*.svg
+# Local analysis and plotting workspace
+fig/
 
 # Local pipeline state
 state/

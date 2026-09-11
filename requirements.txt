@@ -1,7 +1,2 @@
 openai>=1.0.0
 PyYAML>=6.0
-numpy>=1.26.0
-matplotlib>=3.9.0
-Pillow>=10.0.0
-networkx>=3.3
-CairoSVG>=2.9.0
