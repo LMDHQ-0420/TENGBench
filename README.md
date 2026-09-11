@@ -33,7 +33,68 @@ TENGBench builds and evaluates a three-layer question set derived from triboelec
 - **L2 — Research Practice:** paper-level analysis and application reasoning (`RP1`–`RP4`).
 - **L3 — Deep Generation:** open-ended design and synthesis tasks (`DG1`–`DG3`). `DG3` is currently excluded from automated evaluation.
 
-The repository contains source code, agent skills, tests, and safe configuration examples. Papers, generated questions, state, logs, credentials, and evaluation results stay local through `.gitignore`.
+
+**Table 2. TENGBench task taxonomy.**
+
+<table>
+  <thead>
+    <tr>
+      <th>Layer</th>
+      <th>Evaluation objective</th>
+      <th>Subtask</th>
+      <th>Evaluation scope</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td rowspan="4">Fundamentals<br>(L1)</td>
+      <td rowspan="4">Assess mastery of TENG fundamentals and performance metrics.</td>
+      <td>Mechanisms</td>
+      <td>Contact electrification, electrostatic induction, displacement current, and their governing conditions.</td>
+    </tr>
+    <tr>
+      <td>Modes</td>
+      <td>Principles and operating limits of contact-separation, sliding, single-electrode, and freestanding-layer modes.</td>
+    </tr>
+    <tr>
+      <td>Polarity</td>
+      <td>Triboelectric polarity, the triboelectric series, and surface-modification effects.</td>
+    </tr>
+    <tr>
+      <td>Metrics</td>
+      <td>Relationships and trade-offs among voltage, current, transferred charge, power, load, and impedance.</td>
+    </tr>
+    <tr>
+      <td rowspan="4">Applied<br>Reasoning (L2)</td>
+      <td rowspan="4">Assess inference of TENG performance changes from materials, structures, operating conditions, and experimental data.</td>
+      <td>Material Effects</td>
+      <td>Performance effects of material substitution, composition, doping, and surface treatment.</td>
+    </tr>
+    <tr>
+      <td>Structural Effects</td>
+      <td>Performance effects of geometry, layer count, electrode layout, and array architecture.</td>
+    </tr>
+    <tr>
+      <td>Operating Conditions</td>
+      <td>Performance effects of force, frequency, humidity, temperature, and environmental conditions.</td>
+    </tr>
+    <tr>
+      <td>Multi-step Reasoning</td>
+      <td>Multi-step synthesis of experimental observations and quantitative comparisons into consistent conclusions.</td>
+    </tr>
+    <tr>
+      <td rowspan="2">Engineering<br>Design (L3)</td>
+      <td rowspan="2">Assess engineering design of TENG devices and sensing systems.</td>
+      <td>Layer Design</td>
+      <td>Layer-by-layer selection of materials, thicknesses, interfaces, surface treatments, and stacking order.</td>
+    </tr>
+    <tr>
+      <td>System Design</td>
+      <td>End-to-end design of device architecture, arrays, packaging, signal conditioning, acquisition, processing, calibration, and decision-making.</td>
+    </tr>
+  </tbody>
+</table>
+
 
 ## Evaluated model configurations
 
