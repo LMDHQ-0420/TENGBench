@@ -14,7 +14,8 @@
 
 ## News
 
-- **2026-09-11** — The public repository was reorganized around reproducible QA generation and model evaluation workflows.
+- 📊 **[2026/09/11]** Released the complete TENGBench dataset and multi-model evaluation results.
+- 🚀 **[2026/09/01]** Released the TENGBench project source code.
 
 ## Full benchmark results
 
