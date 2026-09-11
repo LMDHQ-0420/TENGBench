@@ -43,8 +43,6 @@ The workflow covers paper screening, QA construction and validation, followed by
 
 TENGBench builds and evaluates a three-layer question set derived from triboelectric nanogenerator (TENG) papers.
 
-**Table 2. TENGBench task taxonomy.**
-
 <table>
   <thead>
     <tr>

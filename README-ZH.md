@@ -43,8 +43,6 @@ TENGBench 用于评测大语言模型能否理解、推理并设计基于摩擦�
 
 TENGBench 从摩擦纳米发电机（TENG）论文中构建三层问题，并测评大语言模型的科研能力。
 
-**Table 2. TENGBench task taxonomy.**
-
 <table>
   <thead>
     <tr>
