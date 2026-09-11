@@ -46,58 +46,58 @@ TENGBench 从摩擦纳米发电机（TENG）论文中构建三层问题，并测
 <table>
   <thead>
     <tr>
-      <th>Layer</th>
-      <th>Evaluation objective</th>
-      <th>Subtask</th>
-      <th>Evaluation scope</th>
+      <th>层级</th>
+      <th>评测目标</th>
+      <th>子任务</th>
+      <th>评测范围</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td rowspan="4">Fundamentals<br>(L1)</td>
-      <td rowspan="4">Assess mastery of TENG fundamentals and performance metrics.</td>
-      <td>Mechanisms</td>
-      <td>Contact electrification, electrostatic induction, displacement current, and their governing conditions.</td>
+      <td rowspan="4">基础理解<br>（L1）</td>
+      <td rowspan="4">评测对 TENG 基础原理与性能指标的掌握程度。</td>
+      <td>机理</td>
+      <td>接触起电、静电感应、位移电流及其成立条件。</td>
     </tr>
     <tr>
-      <td>Modes</td>
-      <td>Principles and operating limits of contact-separation, sliding, single-electrode, and freestanding-layer modes.</td>
+      <td>工作模式</td>
+      <td>接触-分离式、滑动式、单电极式和独立层式模式的原理与工作边界。</td>
     </tr>
     <tr>
-      <td>Polarity</td>
-      <td>Triboelectric polarity, the triboelectric series, and surface-modification effects.</td>
+      <td>摩擦电极性</td>
+      <td>摩擦电极性、摩擦电序列以及表面改性的影响。</td>
     </tr>
     <tr>
-      <td>Metrics</td>
-      <td>Relationships and trade-offs among voltage, current, transferred charge, power, load, and impedance.</td>
+      <td>性能指标</td>
+      <td>电压、电流、转移电荷、功率、负载与阻抗之间的关系和权衡。</td>
     </tr>
     <tr>
-      <td rowspan="4">Applied<br>Reasoning (L2)</td>
-      <td rowspan="4">Assess inference of TENG performance changes from materials, structures, operating conditions, and experimental data.</td>
-      <td>Material Effects</td>
-      <td>Performance effects of material substitution, composition, doping, and surface treatment.</td>
+      <td rowspan="4">应用推理<br>（L2）</td>
+      <td rowspan="4">评测根据材料、结构、运行条件和实验数据推断 TENG 性能变化的能力。</td>
+      <td>材料效应</td>
+      <td>材料替换、组分、掺杂和表面处理对性能的影响。</td>
     </tr>
     <tr>
-      <td>Structural Effects</td>
-      <td>Performance effects of geometry, layer count, electrode layout, and array architecture.</td>
+      <td>结构效应</td>
+      <td>几何形状、层数、电极布局和阵列架构对性能的影响。</td>
     </tr>
     <tr>
-      <td>Operating Conditions</td>
-      <td>Performance effects of force, frequency, humidity, temperature, and environmental conditions.</td>
+      <td>工况影响</td>
+      <td>力、频率、湿度、温度和环境条件对性能的影响。</td>
     </tr>
     <tr>
-      <td>Multi-step Reasoning</td>
-      <td>Multi-step synthesis of experimental observations and quantitative comparisons into consistent conclusions.</td>
+      <td>多步推理</td>
+      <td>通过多步推理综合实验观察与定量比较，形成一致结论。</td>
     </tr>
     <tr>
-      <td rowspan="2">Engineering<br>Design (L3)</td>
-      <td rowspan="2">Assess engineering design of TENG devices and sensing systems.</td>
-      <td>Layer Design</td>
-      <td>Layer-by-layer selection of materials, thicknesses, interfaces, surface treatments, and stacking order.</td>
+      <td rowspan="2">工程设计<br>（L3）</td>
+      <td rowspan="2">评测 TENG 器件与传感系统的工程设计能力。</td>
+      <td>层结构设计</td>
+      <td>逐层选择材料、厚度、界面、表面处理和堆叠顺序。</td>
     </tr>
     <tr>
-      <td>System Design</td>
-      <td>End-to-end design of device architecture, arrays, packaging, signal conditioning, acquisition, processing, calibration, and decision-making.</td>
+      <td>系统设计</td>
+      <td>对器件架构、阵列、封装、信号调理、采集、处理、校准和决策进行端到端设计。</td>
     </tr>
   </tbody>
 </table>
