@@ -19,11 +19,25 @@
 - 📊 **[2026/09/11]** Released the [complete TENGBench dataset](https://huggingface.co/datasets/LMDHQ-0420/TENGBench).
 - 🚀 **[2026/09/01]** Released the TENGBench project source code.
 
+## About
+
+TENGBench evaluates whether large language models can understand, reason about, and design triboelectric nanogenerator-based sensors. A multi-agent framework constructed 4,850 traceable question-answer pairs from 485 papers across 32 journals, covering 10 subtasks in fundamentals, applied reasoning, and engineering design. The benchmark evaluated 29 open- and closed-source models from seven providers through 140,650 independent question-answer runs.
+
+Across all models, the mean overall score was 0.5819 and the best score was 0.7432. Mean scores decreased from 0.6828 on fundamentals to 0.5733 on applied reasoning and 0.4894 on engineering design; the corresponding best scores were 0.8299, 0.7443, and 0.6554. Increasing reasoning effort from Low to X-high improved the overall scores of five GPT variants by 11.7%–13.3%.
+
 ## Full benchmark results
 
 <p align="center">
   <img src="asset/benchmark-results.svg" alt="Complete TENGBench results across evaluated models" width="100%">
 </p>
+
+## Dataset construction and evaluation
+
+<p align="center">
+  <img src="asset/workflow.svg" alt="TENGBench dataset construction and evaluation workflow" width="100%">
+</p>
+
+The workflow covers paper screening, QA construction and validation, followed by API- and skill-based model evaluation.
 
 ## Overview
 
