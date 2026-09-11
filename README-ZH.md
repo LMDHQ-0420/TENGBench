@@ -23,16 +23,9 @@
   <img src="asset/benchmark-results.svg" alt="TENGBench 多模型完整测评结果" width="100%">
 </p>
 
-上图用于展示完整的多模型测评总榜。将最终 SVG 放到 `asset/benchmark-results.svg` 后，README 会自动显示。
-
 ## 项目简介
 
-TENGBench 从摩擦纳米发电机（TENG）论文中构建三层问题，并测评大语言模型的科研能力：
-
-- **L1 — 基础知识：** 机理与器件基础（`BK1`–`BK4`）。
-- **L2 — 研究实践：** 论文分析与应用推理（`RP1`–`RP4`）。
-- **L3 — 深度生成：** 开放式设计与综合任务（`DG1`–`DG3`）。当前自动测评暂不包含 `DG3`。
-
+TENGBench 从摩擦纳米发电机（TENG）论文中构建三层问题，并测评大语言模型的科研能力。
 
 **Table 2. TENGBench task taxonomy.**
 
@@ -95,7 +88,6 @@ TENGBench 从摩擦纳米发电机（TENG）论文中构建三层问题，并测
   </tbody>
 </table>
 
-
 ## 测评模型配置
 
 | 模型家族 | 当前测评配置覆盖 | 推理配置 |
@@ -151,8 +143,6 @@ python qa-generation/scripts/orchestrator/update_master.py
 python qa-generation/scripts/orchestrator/assemble_benchmark.py
 ```
 
-生成的基准题目写入 `benchmark/question/`，并只保留在本地。
-
 ### 运行 API 测评
 
 ```bash
@@ -183,8 +173,6 @@ TENGBench/
 ├── README.md
 └── README-ZH.md
 ```
-
-本地流程还会生成 `papers/`、`cache/`、`benchmark/`、`state/`、`logs/`、`result/`、`result-simulation/` 和 `fig/`；这些目录不会进入提交。
 
 ## 测试
 

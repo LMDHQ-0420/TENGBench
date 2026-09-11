@@ -23,16 +23,9 @@
   <img src="asset/benchmark-results.svg" alt="Complete TENGBench results across evaluated models" width="100%">
 </p>
 
-The figure above is the complete multi-model leaderboard. Put the final vector figure at `asset/benchmark-results.svg`; the README will display it automatically.
-
 ## Overview
 
-TENGBench builds and evaluates a three-layer question set derived from triboelectric nanogenerator (TENG) papers:
-
-- **L1 — Basic Knowledge:** mechanism and device fundamentals (`BK1`–`BK4`).
-- **L2 — Research Practice:** paper-level analysis and application reasoning (`RP1`–`RP4`).
-- **L3 — Deep Generation:** open-ended design and synthesis tasks (`DG1`–`DG3`). `DG3` is currently excluded from automated evaluation.
-
+TENGBench builds and evaluates a three-layer question set derived from triboelectric nanogenerator (TENG) papers.
 
 **Table 2. TENGBench task taxonomy.**
 
@@ -95,7 +88,6 @@ TENGBench builds and evaluates a three-layer question set derived from triboelec
   </tbody>
 </table>
 
-
 ## Evaluated model configurations
 
 | Family | Configurations represented in the evaluation setup | Reasoning setup |
@@ -151,8 +143,6 @@ python qa-generation/scripts/orchestrator/update_master.py
 python qa-generation/scripts/orchestrator/assemble_benchmark.py
 ```
 
-Generated benchmark questions are written to `benchmark/question/` and remain local.
-
 ### Run API evaluation
 
 ```bash
@@ -183,8 +173,6 @@ TENGBench/
 ├── README.md
 └── README-ZH.md
 ```
-
-The local workflow also creates `papers/`, `cache/`, `benchmark/`, `state/`, `logs/`, `result/`, `result-simulation/`, and `fig/`. These directories are intentionally absent from commits.
 
 ## Tests
 
